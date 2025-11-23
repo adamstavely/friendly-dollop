@@ -24,6 +24,10 @@ import { MatListModule } from '@angular/material/list';
     <mat-sidenav-container class="sidenav-container">
       <mat-sidenav mode="side" opened>
         <mat-nav-list>
+          <a mat-list-item routerLink="/dashboard" routerLinkActive="active">
+            <mat-icon>dashboard</mat-icon>
+            <span>Dashboard</span>
+          </a>
           <a mat-list-item routerLink="/tools" routerLinkActive="active">
             <mat-icon>build</mat-icon>
             <span>Tools</span>
@@ -67,6 +71,10 @@ import { MatListModule } from '@angular/material/list';
           <a mat-list-item routerLink="/schema" routerLinkActive="active">
             <mat-icon>schema</mat-icon>
             <span>Schema</span>
+          </a>
+          <a mat-list-item routerLink="/inspector" routerLinkActive="active">
+            <mat-icon>bug_report</mat-icon>
+            <span>Inspector</span>
           </a>
         </mat-nav-list>
       </mat-sidenav>

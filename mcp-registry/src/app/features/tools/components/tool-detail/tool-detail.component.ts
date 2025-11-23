@@ -20,6 +20,8 @@ import { ToolChangelogComponent } from '../tool-changelog/tool-changelog.compone
 import { ToolSchemaViewerComponent } from '../tool-schema-viewer/tool-schema-viewer.component';
 import { VersionDiffComponent } from '../version-diff/version-diff.component';
 import { AuditLogComponent } from '../audit-log/audit-log.component';
+import { InspectorLauncherComponent } from '../../../inspector/components/inspector-launcher/inspector-launcher.component';
+import { InspectorService } from '../../../inspector/services/inspector.service';
 
 @Component({
   selector: 'app-tool-detail',
@@ -43,6 +45,7 @@ import { AuditLogComponent } from '../audit-log/audit-log.component';
     ToolSchemaViewerComponent,
     VersionDiffComponent,
     AuditLogComponent,
+    InspectorLauncherComponent,
     DatePipe
   ],
   template: `
@@ -77,6 +80,10 @@ import { AuditLogComponent } from '../audit-log/audit-log.component';
               <button mat-raised-button color="accent" (click)="promoteTool()" *ngIf="canPromote()">
                 <mat-icon>arrow_upward</mat-icon>
                 Promote
+              </button>
+              <button mat-raised-button color="primary" (click)="launchInspector()" *ngIf="canInspectTool()">
+                <mat-icon>bug_report</mat-icon>
+                Inspect
               </button>
             </div>
           </div>
@@ -266,6 +273,12 @@ import { AuditLogComponent } from '../audit-log/audit-log.component';
                 <app-audit-log [toolId]="tool.toolId"></app-audit-log>
               </div>
             </mat-tab>
+
+            <mat-tab label="Inspect">
+              <div class="tab-content">
+                <app-inspector-launcher [tool]="tool"></app-inspector-launcher>
+              </div>
+            </mat-tab>
           </mat-tab-group>
         </mat-card-content>
       </mat-card>
@@ -342,7 +355,8 @@ export class ToolDetailComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    private toolService: ToolService
+    private toolService: ToolService,
+    private inspectorService: InspectorService
   ) {}
 
   ngOnInit(): void {
@@ -425,6 +439,16 @@ export class ToolDetailComponent implements OnInit {
     if (!this.tool) return;
     // Implementation for promotion workflow
     console.log('Promote tool:', this.tool.toolId);
+  }
+
+  canInspectTool(): boolean {
+    if (!this.tool) return false;
+    return this.inspectorService.canInspectTool(this.tool);
+  }
+
+  launchInspector(): void {
+    if (!this.tool) return;
+    this.inspectorService.launchInspectorForTool(this.tool);
   }
 }
 

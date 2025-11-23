@@ -4,8 +4,12 @@ import { toolRoutes } from './features/tools/tool.routes';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/tools',
+    redirectTo: '/dashboard',
     pathMatch: 'full'
+  },
+  {
+    path: 'dashboard',
+    loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.dashboardRoutes)
   },
   {
     path: 'tools',
@@ -50,5 +54,9 @@ export const routes: Routes = [
   {
     path: 'schema',
     loadChildren: () => import('./features/schema/schema.routes').then(m => m.schemaRoutes)
+  },
+  {
+    path: 'inspector',
+    loadChildren: () => import('./features/inspector/inspector.routes').then(m => m.inspectorRoutes)
   }
 ];
