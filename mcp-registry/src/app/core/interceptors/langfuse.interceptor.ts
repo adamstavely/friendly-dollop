@@ -57,7 +57,7 @@ export const langfuseInterceptor: HttpInterceptorFn = (req, next) => {
           `Tool Invocation: ${toolId}`,
           executionId,
           req.body,
-          { toolId, toolName: toolId }
+          { workflowId: toolId, workflowName: toolId }
         );
       }
     } catch (error) {

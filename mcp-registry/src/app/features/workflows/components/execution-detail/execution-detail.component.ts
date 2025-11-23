@@ -7,6 +7,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { RouterModule } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { WorkflowExecution, ExecutionLog, Workflow } from '../../../../shared/models/workflow.model';
@@ -28,6 +29,7 @@ import { environment } from '../../../../../environments/environment';
     MatChipsModule,
     MatButtonModule,
     MatIconModule,
+    MatExpansionModule,
     RouterModule,
     StatusBadgeComponent,
     DatePipe,
