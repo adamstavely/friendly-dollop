@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of, catchError } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 
 @Injectable({
@@ -9,7 +9,9 @@ export class PersonaService {
   constructor(private api: ApiService) {}
 
   negotiate(persona: string): Observable<any> {
-    return this.api.post('/mcp/negotiate/persona', { persona });
+    return this.api.post('/mcp/negotiate/persona', { persona }).pipe(
+      catchError(() => of({ allowedTools: [] }))
+    );
   }
 }
 

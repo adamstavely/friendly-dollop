@@ -18,10 +18,11 @@ export const httpInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError(error => {
-      if (error.status === 401) {
-        // Unauthorized - redirect to login
-        router.navigate(['/login']);
-      }
+      // Temporarily disabled login redirect for development
+      // if (error.status === 401) {
+      //   // Unauthorized - redirect to login
+      //   router.navigate(['/login']);
+      // }
       return throwError(() => error);
     })
   );
