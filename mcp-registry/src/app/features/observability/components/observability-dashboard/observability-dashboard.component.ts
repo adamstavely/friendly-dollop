@@ -60,7 +60,7 @@ import { StatusBadgeComponent } from '../../../../shared/components/status-badge
               <div class="metric-label">Total Traces</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">{{ (metrics.successRate * 100).toFixed(1) }}%</div>
+              <div class="metric-value">{{ formatPercentage(metrics.successRate) }}%</div>
               <div class="metric-label">Success Rate</div>
             </div>
             <div class="metric-card">
@@ -68,11 +68,11 @@ import { StatusBadgeComponent } from '../../../../shared/components/status-badge
               <div class="metric-label">Avg Latency</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">${{ metrics.totalCost.toFixed(2) }}</div>
+              <div class="metric-value">{{ '$' + formatCost(metrics.totalCost) }}</div>
               <div class="metric-label">Total Cost</div>
             </div>
             <div class="metric-card">
-              <div class="metric-value">{{ (metrics.errorRate * 100).toFixed(1) }}%</div>
+              <div class="metric-value">{{ formatPercentage(metrics.errorRate) }}%</div>
               <div class="metric-label">Error Rate</div>
             </div>
           </div>
@@ -518,5 +518,13 @@ export class ObservabilityDashboardComponent implements OnInit {
     } else {
       this.loadTraces();
     }
+  }
+
+  formatPercentage(value: number): string {
+    return (value * 100).toFixed(1);
+  }
+
+  formatCost(value: number): string {
+    return value.toFixed(2);
   }
 }

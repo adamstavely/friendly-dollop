@@ -14,6 +14,18 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { MatMenuModule } from '@angular/material/menu';
 
+interface TraceTreeNode {
+  id: string;
+  name: string;
+  type: 'trace' | 'span' | 'generation';
+  status: 'success' | 'error' | 'pending';
+  timestamp?: Date;
+  duration?: number;
+  expanded?: boolean;
+  children?: TraceTreeNode[];
+  data?: any;
+}
+
 @Component({
   selector: 'app-trace-detail',
   standalone: true,
@@ -407,19 +419,6 @@ import { MatMenuModule } from '@angular/material/menu';
     }
   `]
 })
-
-interface TraceTreeNode {
-  id: string;
-  name: string;
-  type: 'trace' | 'span' | 'generation';
-  status: 'success' | 'error' | 'pending';
-  timestamp?: Date;
-  duration?: number;
-  expanded?: boolean;
-  children?: TraceTreeNode[];
-  data?: any;
-}
-
 export class TraceDetailComponent implements OnInit {
   trace: LangFuseTrace | null = null;
   generations: LangFuseGeneration[] = [];

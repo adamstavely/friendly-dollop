@@ -103,7 +103,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
                             </div>
                             <div class="metric" *ngIf="result.metrics.cost">
                               <span class="metric-label">Cost:</span>
-                              <span class="metric-value">${{ result.metrics.cost.toFixed(4) }}</span>
+                              <span class="metric-value">{{ '$' + formatCost(result.metrics.cost) }}</span>
                             </div>
                           </div>
                         </mat-card-content>
@@ -134,7 +134,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
                     <ng-container matColumnDef="cost">
                       <th mat-header-cell *matHeaderCellDef>Cost</th>
                       <td mat-cell *matCellDef="let result">
-                        ${{ result.metrics.cost?.toFixed(4) || '-' }}
+                        {{ '$' + formatCost(result.metrics.cost) }}
                       </td>
                     </ng-container>
 
@@ -305,7 +305,9 @@ export class PromptComparisonComponent implements OnInit {
       next: (prompt) => {
         this.prompt = prompt;
         this.loadVersions(id);
-        this.extractVariables(prompt.prompt);
+        if (prompt?.prompt) {
+          this.extractVariables(prompt.prompt);
+        }
         this.loading = false;
       },
       error: (err) => {
@@ -336,6 +338,11 @@ export class PromptComparisonComponent implements OnInit {
     const variableRegex = /\{\{(\w+)\}\}/g;
     const matches = promptText.matchAll(variableRegex);
     this.variables = Array.from(new Set(Array.from(matches).map(m => m[1])));
+  }
+
+  formatCost(cost: number | undefined | null): string {
+    if (cost == null) return '-';
+    return cost.toFixed(4);
   }
 
   addVersionSlot(): void {

@@ -7,6 +7,7 @@ import { LangFuseTrace, LangFuseGeneration, LangFuseScore, LangFuseTraceFilter, 
 export interface TraceFilters {
   userId?: string;
   sessionId?: string;
+  name?: string;
   tags?: string[];
   fromTimestamp?: Date;
   toTimestamp?: Date;
