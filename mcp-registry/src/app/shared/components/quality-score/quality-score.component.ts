@@ -27,6 +27,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .score-value {
       min-width: 60px;
       font-weight: bold;
+      color: #d1c4e9;
     }
   `]
 })

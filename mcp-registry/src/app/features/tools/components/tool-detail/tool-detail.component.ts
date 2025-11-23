@@ -8,11 +8,18 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatListModule } from '@angular/material/list';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { DatePipe } from '@angular/common';
 import { ToolService } from '../../services/tool.service';
 import { Tool } from '../../../../shared/models/tool.model';
 import { LifecycleStateComponent } from '../../../../shared/components/lifecycle-state/lifecycle-state.component';
 import { QualityScoreComponent } from '../../../../shared/components/quality-score/quality-score.component';
 import { ComplianceTagsComponent } from '../../../../shared/components/compliance-tags/compliance-tags.component';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { ToolChangelogComponent } from '../tool-changelog/tool-changelog.component';
+import { ToolSchemaViewerComponent } from '../tool-schema-viewer/tool-schema-viewer.component';
+import { VersionDiffComponent } from '../version-diff/version-diff.component';
+import { AuditLogComponent } from '../audit-log/audit-log.component';
 
 @Component({
   selector: 'app-tool-detail',
@@ -29,10 +36,27 @@ import { ComplianceTagsComponent } from '../../../../shared/components/complianc
     MatExpansionModule,
     LifecycleStateComponent,
     QualityScoreComponent,
-    ComplianceTagsComponent
+    ComplianceTagsComponent,
+    LoadingSpinnerComponent,
+    ErrorDisplayComponent,
+    ToolChangelogComponent,
+    ToolSchemaViewerComponent,
+    VersionDiffComponent,
+    AuditLogComponent,
+    DatePipe
   ],
   template: `
-    <div class="tool-detail-container" *ngIf="tool">
+    <div class="tool-detail-container">
+      <app-loading-spinner *ngIf="loading" message="Loading tool..."></app-loading-spinner>
+      <app-error-display 
+        *ngIf="error && !loading" 
+        [title]="'Failed to Load Tool'"
+        [message]="error"
+        [showRetry]="true"
+        (onRetry)="retryLoad()">
+      </app-error-display>
+      
+      <div *ngIf="tool && !loading">
       <mat-card>
         <mat-card-header>
           <mat-card-title>{{ tool.name }}</mat-card-title>
@@ -62,6 +86,56 @@ import { ComplianceTagsComponent } from '../../../../shared/components/complianc
               <div class="tab-content">
                 <h3>Description</h3>
                 <p>{{ tool.description }}</p>
+
+                <h3>Health Status</h3>
+                <div *ngIf="healthStatus" class="health-status">
+                  <mat-chip [class]="'status-' + healthStatus.status">
+                    {{ healthStatus.status || 'unknown' }}
+                  </mat-chip>
+                  <p *ngIf="healthStatus.lastCheck">
+                    Last Check: {{ healthStatus.lastCheck | date:'short' }}
+                  </p>
+                  <p *ngIf="healthStatus.message">{{ healthStatus.message }}</p>
+                </div>
+                <p *ngIf="!healthStatus">Health status not available</p>
+
+                <h3>Usage Analytics</h3>
+                <div *ngIf="usageData" class="usage-analytics">
+                  <mat-list>
+                    <mat-list-item>
+                      <span matListItemTitle>Total Calls</span>
+                      <span matListItemLine>{{ usageData.totalCalls || 0 }}</span>
+                    </mat-list-item>
+                    <mat-list-item>
+                      <span matListItemTitle>Success Rate</span>
+                      <span matListItemLine>{{ (usageData.successRate * 100).toFixed(2) }}%</span>
+                    </mat-list-item>
+                    <mat-list-item>
+                      <span matListItemTitle>Average Latency</span>
+                      <span matListItemLine>{{ usageData.avgLatencyMs || 0 }}ms</span>
+                    </mat-list-item>
+                    <mat-list-item>
+                      <span matListItemTitle>Last Used</span>
+                      <span matListItemLine>{{ usageData.lastUsed | date:'short' }}</span>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+                <p *ngIf="!usageData">Usage data not available</p>
+
+                <h3>Promotion Status</h3>
+                <div *ngIf="tool.promotionRequirements && tool.promotionRequirements.length > 0">
+                  <mat-list>
+                    <mat-list-item *ngFor="let req of tool.promotionRequirements">
+                      <span matListItemTitle>{{ req.name }}</span>
+                      <span matListItemLine>
+                        <mat-chip [class]="'status-' + req.status">{{ req.status }}</mat-chip>
+                      </span>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+                <p *ngIf="!tool.promotionRequirements || tool.promotionRequirements.length === 0">
+                  No promotion requirements defined
+                </p>
 
                 <h3>Metadata</h3>
                 <mat-list>
@@ -165,9 +239,37 @@ import { ComplianceTagsComponent } from '../../../../shared/components/complianc
                 </mat-list>
               </div>
             </mat-tab>
+
+            <mat-tab label="Changelog">
+              <div class="tab-content">
+                <app-tool-changelog [changelog]="tool.changelog || []"></app-tool-changelog>
+              </div>
+            </mat-tab>
+
+            <mat-tab label="Schema">
+              <div class="tab-content">
+                <app-tool-schema-viewer 
+                  [schemaJson]="getLatestSchema()"
+                  [openApiJson]="getLatestOpenApi()">
+                </app-tool-schema-viewer>
+              </div>
+            </mat-tab>
+
+            <mat-tab label="Version Diff">
+              <div class="tab-content">
+                <app-version-diff [versions]="tool.versions || []"></app-version-diff>
+              </div>
+            </mat-tab>
+
+            <mat-tab label="Audit Log">
+              <div class="tab-content">
+                <app-audit-log [toolId]="tool.toolId"></app-audit-log>
+              </div>
+            </mat-tab>
           </mat-tab-group>
         </mat-card-content>
       </mat-card>
+      </div>
     </div>
   `,
   styles: [`
@@ -196,10 +298,47 @@ import { ComplianceTagsComponent } from '../../../../shared/components/complianc
       margin-top: 20px;
       margin-bottom: 10px;
     }
+    .health-status {
+      padding: 16px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      margin-bottom: 16px;
+    }
+    .status-healthy {
+      background-color: #4caf50;
+      color: white;
+    }
+    .status-unhealthy {
+      background-color: #f44336;
+      color: white;
+    }
+    .status-unknown {
+      background-color: #9e9e9e;
+      color: white;
+    }
+    .status-passed {
+      background-color: #4caf50;
+      color: white;
+    }
+    .status-failed {
+      background-color: #f44336;
+      color: white;
+    }
+    .status-pending {
+      background-color: #ff9800;
+      color: white;
+    }
+    .usage-analytics {
+      margin-bottom: 16px;
+    }
   `]
 })
 export class ToolDetailComponent implements OnInit {
   tool: Tool | null = null;
+  loading: boolean = false;
+  error: string | null = null;
+  healthStatus: any = null;
+  usageData: any = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -214,14 +353,66 @@ export class ToolDetailComponent implements OnInit {
   }
 
   loadTool(id: string): void {
+    this.loading = true;
+    this.error = null;
     this.toolService.getToolById(id).subscribe({
       next: (tool) => {
         this.tool = tool;
+        this.loading = false;
+        this.loadHealthStatus(id);
+        this.loadUsageData(id);
       },
       error: (err) => {
         console.error('Error loading tool:', err);
+        this.error = err.message || 'Failed to load tool';
+        this.loading = false;
       }
     });
+  }
+
+  retryLoad(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.loadTool(id);
+    }
+  }
+
+  loadHealthStatus(id: string): void {
+    this.toolService.getToolHealth(id).subscribe({
+      next: (health) => {
+        this.healthStatus = health;
+      },
+      error: (err) => {
+        console.error('Error loading health status:', err);
+      }
+    });
+  }
+
+  loadUsageData(id: string): void {
+    this.toolService.getToolUsage(id).subscribe({
+      next: (usage) => {
+        this.usageData = usage;
+      },
+      error: (err) => {
+        console.error('Error loading usage data:', err);
+      }
+    });
+  }
+
+  getLatestSchema(): any {
+    if (!this.tool || !this.tool.versions || this.tool.versions.length === 0) {
+      return null;
+    }
+    const latestVersion = this.tool.versions[this.tool.versions.length - 1];
+    return latestVersion.schema;
+  }
+
+  getLatestOpenApi(): any {
+    if (!this.tool || !this.tool.versions || this.tool.versions.length === 0) {
+      return null;
+    }
+    const latestVersion = this.tool.versions[this.tool.versions.length - 1];
+    return latestVersion.openapi;
   }
 
   canPromote(): boolean {

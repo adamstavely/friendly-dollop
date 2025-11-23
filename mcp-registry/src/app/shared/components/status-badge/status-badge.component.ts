@@ -12,10 +12,22 @@ import { MatChipsModule } from '@angular/material/chips';
     </mat-chip>
   `,
   styles: [`
-    .healthy { background-color: #4caf50; color: white; }
-    .unhealthy { background-color: #f44336; color: white; }
-    .unknown { background-color: #9e9e9e; color: white; }
-    .deprecated { background-color: #ff9800; color: white; }
+    .healthy { 
+      background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); 
+      color: white; 
+    }
+    .unhealthy { 
+      background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%); 
+      color: white; 
+    }
+    .unknown { 
+      background: linear-gradient(135deg, #9e9e9e 0%, #757575 100%); 
+      color: white; 
+    }
+    .deprecated { 
+      background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); 
+      color: white; 
+    }
   `]
 })
 export class StatusBadgeComponent {

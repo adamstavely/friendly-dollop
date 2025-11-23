@@ -1,12 +1,18 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
+import { SchemaDiagramComponent } from '../../../schema/components/schema-diagram/schema-diagram.component';
 
 @Component({
   selector: 'app-tool-schema-viewer',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTabsModule],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatTabsModule,
+    SchemaDiagramComponent
+  ],
   template: `
     <div class="schema-viewer-container">
       <mat-tab-group>
@@ -16,6 +22,9 @@ import { MatTabsModule } from '@angular/material/tabs';
         <mat-tab label="OpenAPI">
           <pre *ngIf="openApiJson">{{ openApiJson | json }}</pre>
           <p *ngIf="!openApiJson">No OpenAPI specification available</p>
+        </mat-tab>
+        <mat-tab label="Diagram">
+          <app-schema-diagram [schema]="schemaJson"></app-schema-diagram>
         </mat-tab>
       </mat-tab-group>
     </div>

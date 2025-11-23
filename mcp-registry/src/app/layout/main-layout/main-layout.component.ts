@@ -82,20 +82,39 @@ import { MatListModule } from '@angular/material/list';
   styles: [`
     .sidenav-container {
       height: 100vh;
+      background: transparent;
     }
     mat-sidenav {
       width: 250px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
     }
     mat-nav-list a {
       display: flex;
       align-items: center;
       gap: 12px;
+      padding: 12px 16px;
+      margin: 4px 8px;
+      border-radius: 8px;
     }
     mat-nav-list a.active {
-      background-color: rgba(0, 0, 0, 0.1);
+      background: linear-gradient(90deg, rgba(74, 20, 140, 0.5) 0%, rgba(106, 27, 154, 0.3) 100%);
+      border-left: 3px solid #7b1fa2;
+    }
+    mat-nav-list a mat-icon {
+      color: #9575cd;
+    }
+    mat-nav-list a.active mat-icon {
+      color: #d1c4e9;
     }
     .content {
-      padding: 20px;
+      padding: 24px;
+      background: transparent;
+      min-height: calc(100vh - 64px);
+    }
+    mat-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
     }
   `]
 })

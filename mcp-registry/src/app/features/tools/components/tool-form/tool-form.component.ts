@@ -9,8 +9,11 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { ToolService } from '../../services/tool.service';
 import { Tool } from '../../../../shared/models/tool.model';
+import { COMMA, ENTER } from '@angular/cdk/keycodes';
 
 @Component({
   selector: 'app-tool-form',
@@ -25,7 +28,9 @@ import { Tool } from '../../../../shared/models/tool.model';
     MatSelectModule,
     MatButtonModule,
     MatChipsModule,
-    MatIconModule
+    MatIconModule,
+    MatAutocompleteModule,
+    MatExpansionModule
   ],
   template: `
     <div class="tool-form-container">
@@ -87,6 +92,95 @@ import { Tool } from '../../../../shared/models/tool.model';
               <input matInput formControlName="contact" type="email" required>
             </mat-form-field>
 
+            <div class="chip-input-group">
+              <mat-label>Capabilities</mat-label>
+              <mat-chip-set>
+                <mat-chip *ngFor="let capability of capabilities" (removed)="removeCapability(capability)">
+                  {{ capability }}
+                  <button matChipRemove>
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip>
+              </mat-chip-set>
+              <input 
+                placeholder="Add capability (press Enter)"
+                #capabilityInput
+                (keydown.enter)="addCapabilityFromInput(capabilityInput)"
+                (blur)="addCapabilityFromInput(capabilityInput)">
+            </div>
+
+            <div class="chip-input-group">
+              <mat-label>Tags</mat-label>
+              <mat-chip-set>
+                <mat-chip *ngFor="let tag of tags" (removed)="removeTag(tag)">
+                  {{ tag }}
+                  <button matChipRemove>
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip>
+              </mat-chip-set>
+              <input 
+                placeholder="Add tag (press Enter)"
+                #tagInput
+                (keydown.enter)="addTagFromInput(tagInput)"
+                (blur)="addTagFromInput(tagInput)">
+            </div>
+
+            <mat-form-field>
+              <mat-label>Compliance Tags</mat-label>
+              <mat-select formControlName="complianceTags" multiple>
+                <mat-option value="PII">PII</mat-option>
+                <mat-option value="PHI">PHI</mat-option>
+                <mat-option value="HIPAA">HIPAA</mat-option>
+                <mat-option value="PCI">PCI</mat-option>
+                <mat-option value="Internal-Only">Internal Only</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>Rate Limits</mat-panel-title>
+              </mat-expansion-panel-header>
+              <div formGroupName="rateLimits">
+                <mat-form-field>
+                  <mat-label>Max Per Minute</mat-label>
+                  <input matInput type="number" formControlName="maxPerMinute">
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Max Concurrency</mat-label>
+                  <input matInput type="number" formControlName="maxConcurrency">
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Timeout (ms)</mat-label>
+                  <input matInput type="number" formControlName="timeoutMs">
+                </mat-form-field>
+                <mat-form-field>
+                  <mat-label>Retry Policy</mat-label>
+                  <mat-select formControlName="retryPolicy">
+                    <mat-option value="exponential">Exponential</mat-option>
+                    <mat-option value="linear">Linear</mat-option>
+                    <mat-option value="fixed">Fixed</mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </mat-expansion-panel>
+
+            <mat-expansion-panel>
+              <mat-expansion-panel-header>
+                <mat-panel-title>Dependencies</mat-panel-title>
+              </mat-expansion-panel-header>
+              <div formGroupName="dependencyGraph">
+                <mat-form-field>
+                  <mat-label>Depends On Tools</mat-label>
+                  <mat-select formControlName="dependsOnTools" multiple>
+                    <mat-option *ngFor="let tool of availableTools" [value]="tool.toolId">
+                      {{ tool.name }}
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
+            </mat-expansion-panel>
+
             <div class="form-actions">
               <button mat-raised-button type="button" (click)="onCancel()">Cancel</button>
               <button mat-raised-button color="primary" type="submit" [disabled]="toolForm.invalid">
@@ -113,12 +207,33 @@ import { Tool } from '../../../../shared/models/tool.model';
       justify-content: flex-end;
       margin-top: 20px;
     }
+    .chip-input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .chip-input-group mat-label {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+    mat-chip-set {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   `]
 })
 export class ToolFormComponent implements OnInit {
   toolForm: FormGroup;
   isEditMode = false;
   toolId: string | null = null;
+  capabilities: string[] = [];
+  tags: string[] = [];
+  availableTools: Tool[] = [];
+  separatorKeysCodes: number[] = [ENTER, COMMA];
+  newCapability: string = '';
+  newTag: string = '';
 
   constructor(
     private fb: FormBuilder,
@@ -135,7 +250,17 @@ export class ToolFormComponent implements OnInit {
       ownerTeam: ['', Validators.required],
       contact: ['', [Validators.required, Validators.email]],
       capabilities: [[]],
-      tags: [[]]
+      tags: [[]],
+      complianceTags: [[]],
+      rateLimits: this.fb.group({
+        maxPerMinute: [null],
+        maxConcurrency: [null],
+        timeoutMs: [null],
+        retryPolicy: ['exponential']
+      }),
+      dependencyGraph: this.fb.group({
+        dependsOnTools: [[]]
+      })
     });
   }
 
@@ -145,13 +270,93 @@ export class ToolFormComponent implements OnInit {
       this.isEditMode = true;
       this.loadTool();
     }
+    this.loadAvailableTools();
+  }
+
+  loadAvailableTools(): void {
+    this.toolService.getTools({ limit: 1000 }).subscribe({
+      next: (response) => {
+        this.availableTools = response.tools;
+      },
+      error: (err) => {
+        console.error('Error loading tools:', err);
+      }
+    });
+  }
+
+  addCapabilityFromInput(input: HTMLInputElement): void {
+    const value = (input.value || '').trim();
+    if (value && !this.capabilities.includes(value)) {
+      this.capabilities.push(value);
+      this.toolForm.patchValue({ capabilities: this.capabilities });
+      input.value = '';
+    }
+  }
+
+  addCapability(event: any): void {
+    // Legacy method for compatibility
+    const value = (event.value || '').trim();
+    if (value) {
+      this.capabilities.push(value);
+      this.toolForm.patchValue({ capabilities: this.capabilities });
+    }
+  }
+
+  removeCapability(capability: string): void {
+    const index = this.capabilities.indexOf(capability);
+    if (index >= 0) {
+      this.capabilities.splice(index, 1);
+      this.toolForm.patchValue({ capabilities: this.capabilities });
+    }
+  }
+
+  addTagFromInput(input: HTMLInputElement): void {
+    const value = (input.value || '').trim();
+    if (value && !this.tags.includes(value)) {
+      this.tags.push(value);
+      this.toolForm.patchValue({ tags: this.tags });
+      input.value = '';
+    }
+  }
+
+  addTag(event: any): void {
+    // Legacy method for compatibility
+    const value = (event.value || '').trim();
+    if (value) {
+      this.tags.push(value);
+      this.toolForm.patchValue({ tags: this.tags });
+    }
+  }
+
+  removeTag(tag: string): void {
+    const index = this.tags.indexOf(tag);
+    if (index >= 0) {
+      this.tags.splice(index, 1);
+      this.toolForm.patchValue({ tags: this.tags });
+    }
   }
 
   loadTool(): void {
     if (!this.toolId) return;
     this.toolService.getToolById(this.toolId).subscribe({
       next: (tool) => {
-        this.toolForm.patchValue(tool);
+        this.capabilities = tool.capabilities || [];
+        this.tags = tool.tags || [];
+        this.toolForm.patchValue({
+          ...tool,
+          capabilities: this.capabilities,
+          tags: this.tags,
+          complianceTags: tool.complianceTags || [],
+          rateLimits: tool.rateLimits || {
+            maxPerMinute: null,
+            maxConcurrency: null,
+            timeoutMs: null,
+            retryPolicy: 'exponential'
+          },
+          dependencyGraph: {
+            dependsOnTools: tool.dependencyGraph?.dependsOnTools || []
+          }
+        });
       },
       error: (err) => {
         console.error('Error loading tool:', err);
@@ -161,7 +366,11 @@ export class ToolFormComponent implements OnInit {
 
   onSubmit(): void {
     if (this.toolForm.valid) {
-      const toolData = this.toolForm.value;
+      const toolData = {
+        ...this.toolForm.value,
+        capabilities: this.capabilities,
+        tags: this.tags
+      };
       if (this.isEditMode && this.toolId) {
         this.toolService.updateTool(this.toolId, toolData).subscribe({
           next: () => {

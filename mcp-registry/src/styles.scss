@@ -1,9 +1,215 @@
-/* You can add global styles to this file, and also import other style files */
+/* Custom Dark Purple Theme */
+@use '@angular/material' as mat;
+@include mat.core();
 
-@import '@angular/material/prebuilt-themes/indigo-pink.css';
+// Use prebuilt purple theme as base
+@import '@angular/material/prebuilt-themes/purple-green.css';
 
+/* Global Styles */
 html, body {
   height: 100%;
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
+  background: #0d0519;
+  background: linear-gradient(135deg, #0d0519 0%, #1a0d2e 30%, #0f0718 70%, #0d0519 100%);
+  background-attachment: fixed;
+  color: #d1c4e9;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d0519;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a148c;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6a1b9a;
+}
+
+/* Material component overrides for dark purple theme */
+.mat-toolbar {
+  background: linear-gradient(135deg, #1a0d2e 0%, #2d1b4e 50%, #1a0d2e 100%) !important;
+  color: #e1bee7 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.mat-sidenav {
+  background: linear-gradient(180deg, #0f0718 0%, #0d0519 100%) !important;
+  border-right: 1px solid rgba(74, 20, 140, 0.4);
+}
+
+.mat-nav-list {
+  .mat-list-item {
+    color: #b39ddb;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(74, 20, 140, 0.3);
+      color: #e1bee7;
+    }
+    
+    &.active {
+      background: linear-gradient(90deg, rgba(74, 20, 140, 0.5) 0%, rgba(106, 27, 154, 0.3) 100%);
+      color: #e1bee7;
+      border-left: 3px solid #7b1fa2;
+    }
+  }
+}
+
+.mat-card {
+  background: rgba(15, 7, 24, 0.8) !important;
+  border: 1px solid rgba(74, 20, 140, 0.3);
+  backdrop-filter: blur(10px);
+  color: #d1c4e9;
+}
+
+.mat-form-field {
+  .mat-form-field-label {
+    color: #9575cd;
+  }
+  
+  .mat-input-element {
+    color: #d1c4e9;
+  }
+}
+
+/* Button styling */
+.mat-raised-button.mat-primary {
+  background: linear-gradient(135deg, #4a148c 0%, #6a1b9a 100%);
+  color: white;
+  
+  &:hover {
+    background: linear-gradient(135deg, #6a1b9a 0%, #7b1fa2 100%);
+    box-shadow: 0 4px 12px rgba(74, 20, 140, 0.5);
+  }
+}
+
+/* Table styling */
+.mat-table {
+  background: rgba(15, 7, 24, 0.6) !important;
+  
+  .mat-header-cell {
+    color: #9575cd;
+    background: rgba(26, 13, 46, 0.5);
+  }
+  
+  .mat-cell {
+    color: #d1c4e9;
+    border-bottom-color: rgba(74, 20, 140, 0.3);
+  }
+  
+  .mat-row:hover {
+    background: rgba(74, 20, 140, 0.2);
+  }
+}
+
+/* Chip styling */
+.mat-chip {
+  &.mat-standard-chip {
+    background-color: rgba(74, 20, 140, 0.4);
+    color: #d1c4e9;
+  }
+}
+
+/* Progress bar */
+.mat-progress-bar {
+  .mat-progress-bar-buffer {
+    background-color: rgba(74, 20, 140, 0.3);
+  }
+  
+  .mat-progress-bar-fill::after {
+    background-color: #7b1fa2;
+  }
+}
+
+/* Input fields */
+.mat-form-field-appearance-outline {
+  .mat-form-field-outline {
+    color: rgba(74, 20, 140, 0.5);
+  }
+  
+  &.mat-focused .mat-form-field-outline-thick {
+    color: #7b1fa2;
+  }
+}
+
+/* Dialog/Modal styling */
+.mat-dialog-container {
+  background: linear-gradient(135deg, #0f0718 0%, #0d0519 100%) !important;
+  color: #d1c4e9;
+  border: 1px solid rgba(74, 20, 140, 0.4);
+}
+
+/* Snackbar styling */
+.mat-snack-bar-container {
+  background: linear-gradient(135deg, #1a0d2e 0%, #2d1b4e 100%) !important;
+  color: #e1bee7;
+}
+
+/* Tabs styling */
+.mat-tab-group {
+  .mat-tab-header {
+    border-bottom: 1px solid rgba(74, 20, 140, 0.4);
+  }
+  
+  .mat-tab-label {
+    color: #9575cd;
+    
+    &.mat-tab-label-active {
+      color: #d1c4e9;
+    }
+  }
+  
+  .mat-ink-bar {
+    background-color: #7b1fa2;
+  }
+}
+
+/* Select/Dropdown styling */
+.mat-select-panel {
+  background: linear-gradient(135deg, #0f0718 0%, #0d0519 100%) !important;
+  border: 1px solid rgba(74, 20, 140, 0.4);
+  
+  .mat-option {
+    color: #d1c4e9;
+    
+    &:hover {
+      background: rgba(74, 20, 140, 0.3);
+    }
+    
+    &.mat-selected {
+      background: rgba(74, 20, 140, 0.4);
+    }
+  }
+}
+
+/* Link styling */
+a {
+  color: #9575cd;
+  text-decoration: none;
+  
+  &:hover {
+    color: #d1c4e9;
+    text-decoration: underline;
+  }
+}
+
+/* Card hover effects */
+.mat-card {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(74, 20, 140, 0.4) !important;
+    border-color: rgba(106, 27, 154, 0.5);
+  }
 }

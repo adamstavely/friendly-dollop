@@ -15,6 +15,9 @@ import { Tool } from '../../../../shared/models/tool.model';
 import { LifecycleStateComponent } from '../../../../shared/components/lifecycle-state/lifecycle-state.component';
 import { QualityScoreComponent } from '../../../../shared/components/quality-score/quality-score.component';
 import { ComplianceTagsComponent } from '../../../../shared/components/compliance-tags/compliance-tags.component';
+import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 
 @Component({
   selector: 'app-tool-list',
@@ -33,7 +36,10 @@ import { ComplianceTagsComponent } from '../../../../shared/components/complianc
     MatChipsModule,
     LifecycleStateComponent,
     QualityScoreComponent,
-    ComplianceTagsComponent
+    ComplianceTagsComponent,
+    LoadingSpinnerComponent,
+    ErrorDisplayComponent,
+    EmptyStateComponent
   ],
   template: `
     <div class="tool-list-container">
@@ -42,6 +48,16 @@ import { ComplianceTagsComponent } from '../../../../shared/components/complianc
           <mat-card-title>MCP Tools Registry</mat-card-title>
         </mat-card-header>
         <mat-card-content>
+          <app-loading-spinner *ngIf="loading" message="Loading tools..."></app-loading-spinner>
+          <app-error-display 
+            *ngIf="error && !loading" 
+            [title]="'Failed to Load Tools'"
+            [message]="error"
+            [showRetry]="true"
+            (onRetry)="retryLoad()">
+          </app-error-display>
+
+          <div *ngIf="!loading && !error">
           <div class="filters">
             <mat-form-field>
               <mat-label>Search</mat-label>
@@ -150,12 +166,23 @@ import { ComplianceTagsComponent } from '../../../../shared/components/complianc
           </table>
 
           <mat-paginator
+            *ngIf="tools.length > 0"
             [length]="total"
             [pageSize]="pageSize"
             [pageIndex]="pageIndex"
             [pageSizeOptions]="[10, 25, 50, 100]"
             (page)="onPageChange($event)">
           </mat-paginator>
+
+          <app-empty-state
+            *ngIf="!loading && !error && tools.length === 0"
+            icon="inbox"
+            title="No Tools Found"
+            message="No tools match your search criteria. Try adjusting your filters."
+            actionLabel="Clear Filters"
+            (onAction)="clearFilters()">
+          </app-empty-state>
+          </div>
         </mat-card-content>
       </mat-card>
     </div>
@@ -193,6 +220,8 @@ export class ToolListComponent implements OnInit {
   pageIndex = 0;
   searchQuery = '';
   filters: ToolSearchParams = {};
+  loading: boolean = false;
+  error: string | null = null;
 
   displayedColumns: string[] = [
     'name',
@@ -212,6 +241,8 @@ export class ToolListComponent implements OnInit {
   }
 
   loadTools(): void {
+    this.loading = true;
+    this.error = null;
     const params: ToolSearchParams = {
       ...this.filters,
       page: this.pageIndex,
@@ -225,11 +256,25 @@ export class ToolListComponent implements OnInit {
       next: (response) => {
         this.tools = response.tools;
         this.total = response.total;
+        this.loading = false;
       },
       error: (err) => {
         console.error('Error loading tools:', err);
+        this.error = err.message || 'Failed to load tools';
+        this.loading = false;
       }
     });
+  }
+
+  retryLoad(): void {
+    this.loadTools();
+  }
+
+  clearFilters(): void {
+    this.filters = {};
+    this.searchQuery = '';
+    this.pageIndex = 0;
+    this.loadTools();
   }
 
   onSearch(): void {
