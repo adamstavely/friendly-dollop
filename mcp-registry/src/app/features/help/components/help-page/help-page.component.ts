@@ -1,5 +1,6 @@
 import { Component, OnInit, Inject, Optional } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -12,13 +13,14 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
-import { HelpService, HelpArticle, HelpCategory } from '../../../core/services/help.service';
+import { HelpService, HelpArticle, HelpCategory } from '../../../../core/services/help.service';
 
 @Component({
   selector: 'app-help-page',
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     FormsModule,
     MatDialogModule,
     MatFormFieldModule,

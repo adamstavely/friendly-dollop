@@ -58,5 +58,9 @@ export const routes: Routes = [
   {
     path: 'inspector',
     loadChildren: () => import('./features/inspector/inspector.routes').then(m => m.inspectorRoutes)
+  },
+  {
+    path: 'help',
+    loadComponent: () => import('./features/help/components/help-page/help-page.component').then(m => m.HelpPageComponent)
   }
 ];

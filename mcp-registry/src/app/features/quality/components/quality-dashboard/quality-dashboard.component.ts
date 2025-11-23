@@ -33,6 +33,12 @@ import { QualityTrendsComponent } from '../quality-trends/quality-trends.compone
       <mat-card>
         <mat-card-header>
           <mat-card-title>Quality Dashboard</mat-card-title>
+          <div class="header-actions">
+            <button mat-raised-button color="primary" routerLink="/quality/feedback">
+              <mat-icon>feedback</mat-icon>
+              Submit Feedback
+            </button>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <app-loading-spinner *ngIf="loading" message="Loading quality data..."></app-loading-spinner>
@@ -97,6 +103,15 @@ import { QualityTrendsComponent } from '../quality-trends/quality-trends.compone
     }
     .quality-table a:hover {
       text-decoration: underline;
+    }
+    .header-actions {
+      margin-left: auto;
+    }
+    mat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
     }
   `]
 })

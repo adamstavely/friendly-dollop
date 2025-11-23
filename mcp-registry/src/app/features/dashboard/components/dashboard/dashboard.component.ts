@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatGridListModule } from '@angular/material/grid-list';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { DashboardService, DashboardMetrics, RecentActivity, DashboardAlert } from '../../services/dashboard.service';
 import { MetricsCardComponent } from '../metrics-card/metrics-card.component';
 import { QuickActionsComponent } from '../quick-actions/quick-actions.component';
@@ -10,6 +12,7 @@ import { ActivityFeedComponent } from '../activity-feed/activity-feed.component'
 import { AlertsPanelComponent } from '../alerts-panel/alerts-panel.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 @Component({
   selector: 'app-dashboard',
@@ -18,14 +21,17 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
     CommonModule,
     RouterModule,
     MatCardModule,
-    MatGridListModule,
-    MetricsCardComponent,
-    QuickActionsComponent,
-    ActivityFeedComponent,
-    AlertsPanelComponent,
-    LoadingSpinnerComponent,
-    ErrorDisplayComponent
-  ],
+        MatGridListModule,
+        MatButtonModule,
+        MatIconModule,
+        MetricsCardComponent,
+        QuickActionsComponent,
+        ActivityFeedComponent,
+        AlertsPanelComponent,
+        LoadingSpinnerComponent,
+        ErrorDisplayComponent,
+        HelpTooltipComponent
+      ],
   template: `
     <div class="dashboard-container">
       <app-loading-spinner *ngIf="loading" message="Loading dashboard..."></app-loading-spinner>
@@ -37,8 +43,11 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
         (onRetry)="loadDashboard()">
       </app-error-display>
 
-      <div *ngIf="!loading && !error" class="dashboard-content">
-        <h1 class="dashboard-title">MCP Registry Dashboard</h1>
+          <div *ngIf="!loading && !error" class="dashboard-content">
+            <div class="dashboard-header">
+              <h1 class="dashboard-title">MCP Registry Dashboard</h1>
+              <app-help-tooltip context="dashboard" tooltip="Learn about the dashboard"></app-help-tooltip>
+            </div>
 
         <!-- Key Metrics -->
         <div class="metrics-grid">
@@ -111,12 +120,18 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
     .dashboard-container {
       padding: 24px;
     }
-    .dashboard-title {
-      margin: 0 0 24px 0;
-      color: #e1bee7;
-      font-size: 32px;
-      font-weight: 500;
-    }
+        .dashboard-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 24px;
+        }
+        .dashboard-title {
+          margin: 0;
+          color: #e1bee7;
+          font-size: 32px;
+          font-weight: 500;
+        }
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

@@ -31,6 +31,12 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
       <mat-card>
         <mat-card-header>
           <mat-card-title>Lifecycle Management Dashboard</mat-card-title>
+          <div class="header-actions">
+            <button mat-raised-button color="primary" routerLink="/lifecycle/approvals">
+              <mat-icon>gavel</mat-icon>
+              Approvals
+            </button>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <app-loading-spinner *ngIf="loading" message="Loading lifecycle data..."></app-loading-spinner>
@@ -66,7 +72,7 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
                     </mat-card-content>
                     <mat-card-actions>
                       <button mat-button [routerLink]="['/tools', tool.toolId]">View</button>
-                      <button mat-button *ngIf="canPromote(tool)" (click)="promoteTool(tool)">
+                      <button mat-button *ngIf="canPromote(tool)" [routerLink]="['/lifecycle/promote', tool.toolId]">
                         Promote
                       </button>
                     </mat-card-actions>
@@ -97,6 +103,15 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
     }
     .tool-card {
       height: 100%;
+    }
+    .header-actions {
+      margin-left: auto;
+    }
+    mat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
     }
     .tool-card a {
       text-decoration: none;

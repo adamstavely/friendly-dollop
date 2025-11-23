@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
@@ -25,6 +26,7 @@ import { SearchResultsComponent } from '../search-results/search-results.compone
     MatAutocompleteModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
     MatDialogModule
   ],
   template: `

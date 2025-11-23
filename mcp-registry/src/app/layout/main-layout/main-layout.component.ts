@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { filter } from 'rxjs/operators';
 import { GlobalSearchComponent } from '../../shared/components/global-search/global-search.component';
 
@@ -23,6 +24,7 @@ import { GlobalSearchComponent } from '../../shared/components/global-search/glo
     MatIconModule,
     MatListModule,
     MatExpansionModule,
+    MatTooltipModule,
     GlobalSearchComponent
   ],
   template: `
@@ -137,6 +139,9 @@ import { GlobalSearchComponent } from '../../shared/components/global-search/glo
           <span>MCP Registry</span>
           <span class="spacer"></span>
           <app-global-search></app-global-search>
+          <button mat-icon-button routerLink="/help" matTooltip="Help & Documentation">
+            <mat-icon>help_outline</mat-icon>
+          </button>
         </mat-toolbar>
         <div class="content">
           <router-outlet></router-outlet>

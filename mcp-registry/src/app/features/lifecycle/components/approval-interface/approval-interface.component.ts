@@ -1,5 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +12,7 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { LifecycleService } from '../../services/lifecycle.service';
+import { ToolService } from '../../../tools/services/tool.service';
 import { Tool } from '../../../../shared/models/tool.model';
 import { ToastService } from '../../../../core/services/toast.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
@@ -188,7 +190,9 @@ export class ApprovalInterfaceComponent implements OnInit {
 
   constructor(
     private fb: FormBuilder,
+    private route: ActivatedRoute,
     private lifecycleService: LifecycleService,
+    private toolService: ToolService,
     private toastService: ToastService
   ) {
     this.approvalForm = this.fb.group({
@@ -199,6 +203,12 @@ export class ApprovalInterfaceComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Get toolId from route params if available
+    const routeToolId = this.route.snapshot.paramMap.get('toolId');
+    if (routeToolId) {
+      this.toolId = routeToolId;
+    }
+    
     this.loadApprovals();
     if (this.toolId) {
       this.loadTool();
@@ -206,7 +216,15 @@ export class ApprovalInterfaceComponent implements OnInit {
   }
 
   loadTool(): void {
-    // Load tool details if needed
+    if (!this.toolId) return;
+    this.toolService.getToolById(this.toolId).subscribe({
+      next: (tool) => {
+        this.tool = tool;
+      },
+      error: (err) => {
+        console.error('Error loading tool:', err);
+      }
+    });
   }
 
   loadApprovals(): void {

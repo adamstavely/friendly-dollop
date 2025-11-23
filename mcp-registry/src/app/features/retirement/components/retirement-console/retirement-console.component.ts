@@ -79,7 +79,7 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
               <ng-container matColumnDef="actions">
                 <th mat-header-cell *matHeaderCellDef>Actions</th>
                 <td mat-cell *matCellDef="let tool">
-                  <button mat-button (click)="scheduleRetirement(tool)">
+                  <button mat-button [routerLink]="['/retirement/schedule', tool.toolId]">
                     <mat-icon>schedule</mat-icon>
                     Schedule
                   </button>
