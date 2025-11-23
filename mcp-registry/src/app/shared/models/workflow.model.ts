@@ -1,3 +1,6 @@
+export type WorkflowEngine = 'flowise' | 'langchain' | 'langgraph';
+export type WorkflowType = 'agent' | 'chain' | 'graph';
+
 export interface Workflow {
   id: string;
   name: string;
@@ -7,6 +10,10 @@ export interface Workflow {
   updatedAt: string;
   createdBy?: string;
   tags?: string[];
+  
+  // Engine selection
+  engine?: WorkflowEngine; // Default: 'flowise' for backward compatibility
+  workflowType?: WorkflowType; // For Langchain workflows
   
   // Flowise-specific fields
   flowiseId?: string; // ID in Flowise system
@@ -22,6 +29,11 @@ export interface Workflow {
   lastExecuted?: string;
   successRate?: number;
   avgExecutionTime?: number;
+  
+  // Langchain/Langgraph configuration
+  langchainConfig?: LangchainConfig;
+  chainConfig?: ChainConfig;
+  agentConfig?: AgentConfig;
 }
 
 export interface WorkflowNode {
@@ -45,6 +57,8 @@ export interface WorkflowDefinition {
   nodes: WorkflowNode[];
   connections: WorkflowConnection[];
   viewport?: { x: number; y: number; zoom: number };
+  langgraphConfig?: any; // Langgraph-specific configuration
+  stateSchema?: any; // State schema for Langgraph
 }
 
 export interface WorkflowExecution {
@@ -58,6 +72,11 @@ export interface WorkflowExecution {
   output?: any;
   error?: string;
   logs?: ExecutionLog[];
+  
+  // Langchain/Langgraph specific
+  state?: any; // For Langgraph state
+  toolCalls?: any[]; // For agent executions
+  reasoningSteps?: string[]; // For agent reasoning
 }
 
 export interface ExecutionLog {
@@ -74,5 +93,32 @@ export interface WorkflowTemplate {
   category?: string;
   definition: WorkflowDefinition;
   mcpTools?: string[];
+}
+
+// Langchain/Langgraph configuration interfaces
+export interface LangchainConfig {
+  agentType?: string;
+  chainType?: string;
+  llmProvider?: string;
+  llmModel?: string;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+export interface ChainConfig {
+  chainType: string;
+  nodes: string[]; // Node IDs in order
+  transforms?: { [key: string]: any };
+}
+
+export interface AgentConfig {
+  agentType: string; // ReActAgent, PlanAndExecuteAgent, etc.
+  llmProvider: string;
+  llmModel: string;
+  temperature?: number;
+  maxTokens?: number;
+  systemMessage?: string;
+  persona?: string;
+  tools?: string[]; // MCP tool IDs
 }
 

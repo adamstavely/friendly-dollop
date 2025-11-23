@@ -36,6 +36,7 @@
     "cytoscape": "^3.33.1",
     "d3": "^7.9.0",
     "date-fns": "^4.1.0",
+    "langfuse": "^3.38.6",
     "mermaid": "^11.12.1",
     "monaco-editor": "^0.55.1",
     "ng2-charts": "^8.0.0",

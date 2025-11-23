@@ -10,7 +10,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatTableModule } from '@angular/material/table';
 import { DatePipe } from '@angular/common';
 import { WorkflowService } from '../../services/workflow.service';
-import { Workflow, WorkflowExecution } from '../../../../shared/models/workflow.model';
+import { Workflow, WorkflowExecution, WorkflowDefinition } from '../../../../shared/models/workflow.model';
 import { LifecycleStateComponent } from '../../../../shared/components/lifecycle-state/lifecycle-state.component';
 import { QualityScoreComponent } from '../../../../shared/components/quality-score/quality-score.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
@@ -18,6 +18,9 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
 import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmationService } from '../../../../core/services/confirmation.service';
+import { MatDialog } from '@angular/material/dialog';
+import { ExecutionDetailComponent } from '../execution-detail/execution-detail.component';
+import { WorkflowCanvasComponent } from '../workflow-builder/workflow-canvas.component';
 
 @Component({
   selector: 'app-workflow-detail',
@@ -37,7 +40,8 @@ import { ConfirmationService } from '../../../../core/services/confirmation.serv
     LoadingSpinnerComponent,
     ErrorDisplayComponent,
     StatusBadgeComponent,
-    DatePipe
+    DatePipe,
+    WorkflowCanvasComponent
   ],
   template: `
     <div class="workflow-detail-container">
@@ -191,9 +195,17 @@ import { ConfirmationService } from '../../../../core/services/confirmation.serv
             <mat-tab label="Workflow Graph">
               <div class="tab-content">
                 <h3>Workflow Visualization</h3>
-                <div class="workflow-graph-placeholder">
-                  <p>Workflow graph visualization will be displayed here</p>
-                  <p class="hint">Edit the workflow to see the visual representation</p>
+                <div *ngIf="workflowDefinition && workflowDefinition.nodes.length > 0" class="workflow-graph-container">
+                  <app-workflow-canvas
+                    [nodes]="workflowDefinition.nodes"
+                    [connections]="workflowDefinition.connections"
+                    [selectedNodeId]="null"
+                    (nodeSelected)="onGraphNodeSelected($event)">
+                  </app-workflow-canvas>
+                </div>
+                <div *ngIf="!workflowDefinition || workflowDefinition.nodes.length === 0" class="workflow-graph-placeholder">
+                  <p>No workflow definition available</p>
+                  <p class="hint">Edit the workflow to create a visual representation</p>
                 </div>
               </div>
             </mat-tab>
@@ -239,6 +251,9 @@ import { ConfirmationService } from '../../../../core/services/confirmation.serv
     .execution-stats {
       margin-bottom: 16px;
     }
+    .workflow-graph-container {
+      margin-top: 16px;
+    }
     .workflow-graph-placeholder {
       padding: 40px;
       text-align: center;
@@ -260,6 +275,7 @@ import { ConfirmationService } from '../../../../core/services/confirmation.serv
 export class WorkflowDetailComponent implements OnInit {
   workflow: Workflow | null = null;
   executions: WorkflowExecution[] = [];
+  workflowDefinition: WorkflowDefinition | null = null;
   loading: boolean = false;
   error: string | null = null;
 
@@ -270,7 +286,8 @@ export class WorkflowDetailComponent implements OnInit {
     private router: Router,
     private workflowService: WorkflowService,
     private toastService: ToastService,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private dialog: MatDialog
   ) {}
 
   ngOnInit(): void {
@@ -287,12 +304,24 @@ export class WorkflowDetailComponent implements OnInit {
     this.workflowService.getWorkflowById(id).subscribe({
       next: (workflow) => {
         this.workflow = workflow;
+        this.loadWorkflowDefinition(id);
         this.loading = false;
       },
       error: (err) => {
         console.error('Error loading workflow:', err);
         this.error = err.message || 'Failed to load workflow';
         this.loading = false;
+      }
+    });
+  }
+
+  loadWorkflowDefinition(id: string): void {
+    this.workflowService.getWorkflowDefinition(id).subscribe({
+      next: (definition) => {
+        this.workflowDefinition = definition;
+      },
+      error: (err) => {
+        console.error('Error loading workflow definition:', err);
       }
     });
   }
@@ -346,8 +375,26 @@ export class WorkflowDetailComponent implements OnInit {
   }
 
   viewExecution(executionId: string): void {
-    // Navigate to execution detail or show in dialog
-    console.log('View execution:', executionId);
+    if (!this.workflow) return;
+    // Load execution details
+    this.workflowService.getExecution(this.workflow.id, executionId).subscribe({
+      next: (execution) => {
+        this.dialog.open(ExecutionDetailComponent, {
+          width: '900px',
+          maxWidth: '90vw',
+          data: { execution }
+        });
+      },
+      error: (err) => {
+        console.error('Error loading execution:', err);
+        this.toastService.error('Failed to load execution details');
+      }
+    });
+  }
+
+  onGraphNodeSelected(node: any): void {
+    // Handle node selection in read-only graph view
+    // Could show node details in a side panel
   }
 }
 

@@ -80,6 +80,10 @@ import { StatusBadgeComponent } from '../../../../shared/components/status-badge
               <mat-icon>add</mat-icon>
               New Workflow
             </button>
+            <button mat-raised-button routerLink="/workflows/templates">
+              <mat-icon>description</mat-icon>
+              Templates
+            </button>
           </div>
 
           <table mat-table [dataSource]="workflows" class="workflows-table">

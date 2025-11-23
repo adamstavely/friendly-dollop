@@ -66,5 +66,17 @@ export const routes: Routes = [
   {
     path: 'workflows',
     loadChildren: () => import('./features/workflows/workflows.routes').then(m => m.workflowRoutes)
+  },
+  {
+    path: 'observability',
+    loadChildren: () => import('./features/observability/observability.routes').then(m => m.observabilityRoutes)
+  },
+  {
+    path: 'prompts',
+    loadChildren: () => import('./features/prompts/prompts.routes').then(m => m.promptsRoutes)
+  },
+  {
+    path: 'security',
+    loadChildren: () => import('./features/security/security.routes').then(m => m.securityRoutes)
   }
 ];

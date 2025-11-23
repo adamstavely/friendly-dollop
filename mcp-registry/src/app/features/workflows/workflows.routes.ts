@@ -13,6 +13,11 @@ export const workflowRoutes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'templates',
+    loadComponent: () => import('./components/workflow-templates/workflow-templates.component').then(m => m.WorkflowTemplatesComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: ':id',
     loadComponent: () => import('./components/workflow-detail/workflow-detail.component').then(m => m.WorkflowDetailComponent),
     canActivate: [authGuard]

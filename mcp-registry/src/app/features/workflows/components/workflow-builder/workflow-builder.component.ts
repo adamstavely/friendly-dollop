@@ -22,6 +22,7 @@ import { Tool } from '../../../../shared/models/tool.model';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
 import { ToastService } from '../../../../core/services/toast.service';
+import { WorkflowCanvasComponent } from './workflow-canvas.component';
 
 @Component({
   selector: 'app-workflow-builder',
@@ -39,7 +40,8 @@ import { ToastService } from '../../../../core/services/toast.service';
     MatTabsModule,
     MatChipsModule,
     LoadingSpinnerComponent,
-    ErrorDisplayComponent
+    ErrorDisplayComponent,
+    WorkflowCanvasComponent
   ],
   template: `
     <div class="workflow-builder-container">
@@ -84,14 +86,34 @@ import { ToastService } from '../../../../core/services/toast.service';
                     <textarea matInput [(ngModel)]="workflow.description" rows="4" placeholder="Describe what this workflow does"></textarea>
                   </mat-form-field>
 
-                  <mat-form-field>
-                    <mat-label>Status</mat-label>
-                    <mat-select [(ngModel)]="workflow.status">
-                      <mat-option value="draft">Draft</mat-option>
-                      <mat-option value="active">Active</mat-option>
-                      <mat-option value="archived">Archived</mat-option>
-                    </mat-select>
-                  </mat-form-field>
+                  <div class="form-row">
+                    <mat-form-field>
+                      <mat-label>Status</mat-label>
+                      <mat-select [(ngModel)]="workflow.status">
+                        <mat-option value="draft">Draft</mat-option>
+                        <mat-option value="active">Active</mat-option>
+                        <mat-option value="archived">Archived</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field>
+                      <mat-label>Engine</mat-label>
+                      <mat-select [(ngModel)]="workflow.engine" (selectionChange)="onEngineChanged()">
+                        <mat-option value="flowise">Flowise</mat-option>
+                        <mat-option value="langchain">Langchain</mat-option>
+                        <mat-option value="langgraph">Langgraph</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+
+                    <mat-form-field *ngIf="workflow.engine === 'langchain' || workflow.engine === 'langgraph'">
+                      <mat-label>Workflow Type</mat-label>
+                      <mat-select [(ngModel)]="workflow.workflowType" (selectionChange)="onWorkflowTypeChanged()">
+                        <mat-option *ngIf="workflow.engine === 'langchain'" value="agent">Agent</mat-option>
+                        <mat-option *ngIf="workflow.engine === 'langchain'" value="chain">Chain</mat-option>
+                        <mat-option *ngIf="workflow.engine === 'langgraph'" value="graph">Graph</mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
                 </div>
               </mat-tab>
 
@@ -116,41 +138,41 @@ import { ToastService } from '../../../../core/services/toast.service';
                     </button>
                   </div>
 
-                  <div class="workflow-canvas">
-                    <div class="canvas-placeholder" *ngIf="definition.nodes.length === 0">
-                      <mat-icon>account_tree</mat-icon>
-                      <p>Start building your workflow by adding nodes</p>
-                      <p class="hint">Use the buttons above to add workflow steps</p>
-                    </div>
-
-                    <div class="node-list" *ngIf="definition.nodes.length > 0">
-                      <div 
-                        *ngFor="let node of definition.nodes" 
-                        class="workflow-node"
-                        [class.selected]="selectedNode?.id === node.id"
-                        (click)="selectNode(node)">
-                        <div class="node-header">
-                          <mat-icon>{{ getNodeIcon(node.type) }}</mat-icon>
-                          <span class="node-label">{{ node.label }}</span>
-                          <button mat-icon-button (click)="removeNode(node.id); $event.stopPropagation()">
-                            <mat-icon>close</mat-icon>
-                          </button>
-                        </div>
-                        <div class="node-content" *ngIf="selectedNode?.id === node.id">
-                          <div *ngIf="node.type === 'mcp-tool'">
-                            <mat-form-field class="full-width">
-                              <mat-label>MCP Tool</mat-label>
-                              <mat-select [(ngModel)]="node.mcpToolId" (selectionChange)="onToolSelected(node, $event.value)">
-                                <mat-option *ngFor="let tool of availableTools" [value]="tool.toolId">
-                                  {{ tool.name }}
-                                </mat-option>
-                              </mat-select>
-                            </mat-form-field>
-                          </div>
-                          <div class="node-connections">
-                            <p>Connections: {{ getNodeConnections(node.id).length }}</p>
-                          </div>
-                        </div>
+                  <div class="workflow-canvas-wrapper">
+                    <app-workflow-canvas
+                      [nodes]="definition.nodes"
+                      [connections]="definition.connections"
+                      [selectedNodeId]="selectedNode?.id || null"
+                      (nodeSelected)="onNodeSelected($event)"
+                      (nodeMoved)="onNodeMoved($event)"
+                      (connectionCreated)="onConnectionCreated($event)"
+                      (connectionDeleted)="onConnectionDeleted($event)">
+                    </app-workflow-canvas>
+                    
+                    <div class="node-config-panel" *ngIf="selectedNode">
+                      <h4>Configure Node</h4>
+                      <div *ngIf="selectedNode.type === 'mcp-tool'">
+                        <mat-form-field class="full-width">
+                          <mat-label>MCP Tool</mat-label>
+                          <mat-select [(ngModel)]="selectedNode.mcpToolId" (selectionChange)="onToolSelected(selectedNode, $event.value)">
+                            <mat-option *ngFor="let tool of availableTools" [value]="tool.toolId">
+                              {{ tool.name }}
+                            </mat-option>
+                          </mat-select>
+                        </mat-form-field>
+                      </div>
+                      <div>
+                        <mat-form-field class="full-width">
+                          <mat-label>Node Label</mat-label>
+                          <input matInput [(ngModel)]="selectedNode.label" (ngModelChange)="updateNodeLabel()">
+                        </mat-form-field>
+                      </div>
+                      <div class="node-connections-info">
+                        <p><strong>Connections:</strong> {{ getNodeConnections(selectedNode.id).length }}</p>
+                        <button mat-button (click)="removeNode(selectedNode.id)" color="warn">
+                          <mat-icon>delete</mat-icon>
+                          Remove Node
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -210,18 +232,43 @@ import { ToastService } from '../../../../core/services/toast.service';
       width: 100%;
       margin-bottom: 16px;
     }
+    .form-row {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .form-row mat-form-field {
+      flex: 1;
+    }
     .builder-toolbar {
       display: flex;
       gap: 8px;
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
-    .workflow-canvas {
-      min-height: 400px;
-      border: 2px dashed #ccc;
+    .workflow-canvas-wrapper {
+      position: relative;
+      display: flex;
+      gap: 20px;
+    }
+    .node-config-panel {
+      width: 300px;
+      background: white;
+      border: 1px solid #ddd;
       border-radius: 8px;
-      padding: 20px;
-      background: #fafafa;
+      padding: 16px;
+      height: fit-content;
+      position: sticky;
+      top: 20px;
+    }
+    .node-config-panel h4 {
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    .node-connections-info {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
     }
     .canvas-placeholder {
       display: flex;
@@ -310,6 +357,7 @@ export class WorkflowBuilderComponent implements OnInit {
     name: '',
     description: '',
     status: 'draft',
+    engine: 'flowise',
     mcpTools: []
   };
   definition: WorkflowDefinition = {
@@ -540,6 +588,46 @@ export class WorkflowBuilderComponent implements OnInit {
 
   cancel(): void {
     this.router.navigate(['/workflows']);
+  }
+
+  onNodeSelected(node: WorkflowNode): void {
+    this.selectedNode = node;
+  }
+
+  onNodeMoved(event: { nodeId: string; position: { x: number; y: number } }): void {
+    const node = this.definition.nodes.find(n => n.id === event.nodeId);
+    if (node) {
+      node.position = event.position;
+    }
+  }
+
+  onConnectionCreated(connection: WorkflowConnection): void {
+    this.definition.connections.push(connection);
+  }
+
+  onConnectionDeleted(connectionId: string): void {
+    this.definition.connections = this.definition.connections.filter(c => c.id !== connectionId);
+  }
+
+  updateNodeLabel(): void {
+    // Node label is already updated via ngModel binding
+    // This method can be used for additional logic if needed
+  }
+
+  onEngineChanged(): void {
+    // Reset workflow type when engine changes
+    if (this.workflow.engine === 'flowise') {
+      this.workflow.workflowType = undefined;
+    } else if (this.workflow.engine === 'langchain' && !this.workflow.workflowType) {
+      this.workflow.workflowType = 'chain'; // Default to chain
+    } else if (this.workflow.engine === 'langgraph') {
+      this.workflow.workflowType = 'graph';
+    }
+  }
+
+  onWorkflowTypeChanged(): void {
+    // Update available node types based on workflow type
+    // This could show/hide certain node types in the toolbar
   }
 }
 
