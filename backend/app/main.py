@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api import workflows, executions, agents, chains, langfuse
+from app.api import workflows, executions, agents, chains, langfuse, gitops
 
 app = FastAPI(
     title=settings.api_title,
@@ -25,6 +25,7 @@ app.include_router(executions.router, prefix=settings.api_prefix, tags=["executi
 app.include_router(agents.router, prefix=settings.api_prefix, tags=["agents"])
 app.include_router(chains.router, prefix=settings.api_prefix, tags=["chains"])
 app.include_router(langfuse.router, prefix=settings.api_prefix, tags=["langfuse"])
+app.include_router(gitops.router, prefix=settings.api_prefix, tags=["gitops"])
 
 
 @app.get("/")

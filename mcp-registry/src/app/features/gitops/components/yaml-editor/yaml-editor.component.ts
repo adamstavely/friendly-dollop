@@ -7,11 +7,15 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { GitOpsService } from '../../services/gitops.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { YamlTemplateGeneratorComponent, TemplateGeneratorData } from '../yaml-template-generator/yaml-template-generator.component';
 import { YamlDiffViewerComponent } from '../yaml-diff-viewer/yaml-diff-viewer.component';
+import { YamlFileSelectorComponent, SavedFile, FileSelectorData } from '../yaml-file-selector/yaml-file-selector.component';
 import { Tool } from '../../../../shared/models/tool.model';
+import { MonacoService } from '../../../../core/services/monaco.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { load as yamlLoad } from 'js-yaml';
 import Ajv from 'ajv/dist/2020';
 
@@ -28,6 +32,7 @@ declare var monaco: any;
     MatChipsModule,
     MatMenuModule,
     MatTooltipModule,
+    MatDividerModule,
     LoadingSpinnerComponent
   ],
   template: `
@@ -60,6 +65,15 @@ declare var monaco: any;
               <mat-icon>compare</mat-icon>
               Diff
             </button>
+            <button mat-raised-button (click)="undo()" [disabled]="!canUndo()" matTooltip="Undo (Ctrl+Z)">
+              <mat-icon>undo</mat-icon>
+            </button>
+            <button mat-raised-button (click)="redo()" [disabled]="!canRedo()" matTooltip="Redo (Ctrl+Y)">
+              <mat-icon>redo</mat-icon>
+            </button>
+            <button mat-raised-button (click)="copyToClipboard()" matTooltip="Copy to clipboard">
+              <mat-icon>content_copy</mat-icon>
+            </button>
           </div>
           
           <mat-menu #templateMenu="matMenu">
@@ -81,6 +95,19 @@ declare var monaco: any;
             <button mat-menu-item (click)="exportYaml()">
               <mat-icon>download</mat-icon>
               <span>Export YAML</span>
+            </button>
+            <button mat-menu-item (click)="exportToJson()">
+              <mat-icon>code</mat-icon>
+              <span>Export to JSON</span>
+            </button>
+            <mat-divider></mat-divider>
+            <button mat-menu-item (click)="saveToLocalStorage()">
+              <mat-icon>save</mat-icon>
+              <span>Save to Browser</span>
+            </button>
+            <button mat-menu-item (click)="loadFromLocalStorage()">
+              <mat-icon>folder_open</mat-icon>
+              <span>Load from Browser</span>
             </button>
           </mat-menu>
 
@@ -158,7 +185,9 @@ export class YamlEditorComponent implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(
     private gitOpsService: GitOpsService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private monacoService: MonacoService,
+    private toastService: ToastService
   ) {
     this.ajv = new Ajv({ allErrors: true, verbose: true });
   }
@@ -167,7 +196,9 @@ export class YamlEditorComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadTemplate();
   }
 
-  ngAfterViewInit(): void {
+  async ngAfterViewInit(): Promise<void> {
+    // Wait for Monaco YAML to be initialized
+    await this.monacoService.waitForInitialization();
     this.initializeEditor();
   }
 
@@ -483,53 +514,12 @@ export class YamlEditorComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   registerSchema(schema: any): void {
-    if (typeof monaco === 'undefined') {
-      return;
-    }
-
-    // Register schema for YAML validation with monaco-yaml
-    try {
-      // Try to use monaco-yaml if available
-      if (monaco.languages && monaco.languages.yaml && monaco.languages.yaml.yamlDefaults) {
-        monaco.languages.yaml.yamlDefaults.setDiagnosticsOptions({
-          validate: true,
-          enableSchemaRequest: true,
-          schemas: [{
-            uri: 'http://mcp-registry/schemas/tool.yaml',
-            fileMatch: ['*'],
-            schema: schema
-          }]
-        });
-      } else {
-        // Try to load monaco-yaml dynamically
-        this.loadMonacoYaml(schema);
-      }
-    } catch (err) {
-      // YAML language support may not be available
-      console.warn('Monaco YAML language support not available, using fallback validation:', err);
-    }
-  }
-
-  private loadMonacoYaml(schema: any): void {
-    // Try to dynamically import monaco-yaml if available
-    try {
-      import('monaco-yaml').then((monacoYaml) => {
-        if (monacoYaml && monacoYaml.setupMonacoYaml) {
-          monacoYaml.setupMonacoYaml(monaco, {
-            schemas: [{
-              uri: 'http://mcp-registry/schemas/tool.yaml',
-              fileMatch: ['*'],
-              schema: schema
-            }]
-          });
-        }
-      }).catch(() => {
-        // monaco-yaml not available, use fallback
-        console.warn('monaco-yaml package not available');
-      });
-    } catch (err) {
-      console.warn('Could not load monaco-yaml:', err);
-    }
+    // Use MonacoService to register schema
+    this.monacoService.registerYamlSchema(
+      'http://mcp-registry/schemas/tool.yaml',
+      schema,
+      ['*']
+    );
   }
 
   registerDefaultSchema(): void {
@@ -777,6 +767,115 @@ rateLimits:
         component.setModifiedContent(currentContent);
       }
     });
+  }
+
+  undo(): void {
+    if (this.editor) {
+      this.editor.getAction('undo').run();
+    }
+  }
+
+  redo(): void {
+    if (this.editor) {
+      this.editor.getAction('redo').run();
+    }
+  }
+
+  canUndo(): boolean {
+    if (!this.editor) {
+      return false;
+    }
+    return this.editor.getAction('undo').isSupported();
+  }
+
+  canRedo(): boolean {
+    if (!this.editor) {
+      return false;
+    }
+    return this.editor.getAction('redo').isSupported();
+  }
+
+  copyToClipboard(): void {
+    const content = this.getYamlContent();
+    navigator.clipboard.writeText(content).then(() => {
+      this.toastService.show('Copied to clipboard', 'success');
+    }).catch(err => {
+      console.error('Failed to copy to clipboard:', err);
+      this.toastService.show('Failed to copy to clipboard', 'error');
+    });
+  }
+
+  exportToJson(): void {
+    const content = this.getYamlContent();
+    try {
+      const parsed = yamlLoad(content);
+      const json = JSON.stringify(parsed, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'tool-definition.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Failed to export to JSON:', err);
+      this.validationErrors = [`Failed to export: ${err.message}`];
+    }
+  }
+
+  saveToLocalStorage(): void {
+    const content = this.getYamlContent();
+    const timestamp = new Date().toISOString();
+    const name = prompt('Enter a name for this YAML file:', `yaml-${timestamp.split('T')[0]}`);
+    
+    if (!name) {
+      return;
+    }
+
+    const savedFiles = this.getSavedFiles();
+    const fileData = {
+      name,
+      content,
+      timestamp,
+      id: Date.now().toString()
+    };
+
+    savedFiles.push(fileData);
+    localStorage.setItem('yaml-editor-saved-files', JSON.stringify(savedFiles));
+    this.toastService.show(`Saved "${name}" to browser storage`, 'success');
+  }
+
+  loadFromLocalStorage(): void {
+    const savedFiles = this.getSavedFiles();
+    
+    if (savedFiles.length === 0) {
+      alert('No saved files found');
+      return;
+    }
+
+    const dialogRef = this.dialog.open(YamlFileSelectorComponent, {
+      width: '500px',
+      data: {
+        files: savedFiles,
+        onSelect: (file: SavedFile) => {
+          this.yamlContent = file.content;
+          if (this.editor) {
+            this.editor.setValue(file.content);
+          }
+          this.toastService.show(`Loaded "${file.name}"`, 'success');
+        }
+      } as FileSelectorData
+    });
+  }
+
+  private getSavedFiles(): any[] {
+    try {
+      const stored = localStorage.getItem('yaml-editor-saved-files');
+      return stored ? JSON.parse(stored) : [];
+    } catch (err) {
+      console.error('Failed to load saved files:', err);
+      return [];
+    }
   }
 
   ngOnDestroy(): void {
