@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ToastService } from '../../../../core/services/toast.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -43,6 +44,9 @@ import { COMMA, ENTER } from '@angular/cdk/keycodes';
             <mat-form-field>
               <mat-label>Name</mat-label>
               <input matInput formControlName="name" required>
+              <mat-error *ngIf="toolForm.get('name')?.hasError('required') && toolForm.get('name')?.touched">
+                Name is required
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field>
@@ -53,6 +57,9 @@ import { COMMA, ENTER } from '@angular/cdk/keycodes';
             <mat-form-field>
               <mat-label>Domain</mat-label>
               <mat-select formControlName="domain" required>
+              <mat-error *ngIf="toolForm.get('domain')?.hasError('required') && toolForm.get('domain')?.touched">
+                Domain is required
+              </mat-error>
                 <mat-option value="search">Search</mat-option>
                 <mat-option value="finance">Finance</mat-option>
                 <mat-option value="hr">HR</mat-option>
@@ -85,11 +92,20 @@ import { COMMA, ENTER } from '@angular/cdk/keycodes';
             <mat-form-field>
               <mat-label>Owner Team</mat-label>
               <input matInput formControlName="ownerTeam" required>
+              <mat-error *ngIf="toolForm.get('ownerTeam')?.hasError('required') && toolForm.get('ownerTeam')?.touched">
+                Owner team is required
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field>
               <mat-label>Contact</mat-label>
               <input matInput formControlName="contact" type="email" required>
+              <mat-error *ngIf="toolForm.get('contact')?.hasError('required') && toolForm.get('contact')?.touched">
+                Contact email is required
+              </mat-error>
+              <mat-error *ngIf="toolForm.get('contact')?.hasError('email') && toolForm.get('contact')?.touched">
+                Please enter a valid email address
+              </mat-error>
             </mat-form-field>
 
             <div class="chip-input-group">
@@ -239,7 +255,8 @@ export class ToolFormComponent implements OnInit {
     private fb: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private toolService: ToolService
+    private toolService: ToolService,
+    private toastService: ToastService
   ) {
     this.toolForm = this.fb.group({
       name: ['', Validators.required],
@@ -374,19 +391,23 @@ export class ToolFormComponent implements OnInit {
       if (this.isEditMode && this.toolId) {
         this.toolService.updateTool(this.toolId, toolData).subscribe({
           next: () => {
+            this.toastService.success('Tool updated successfully');
             this.router.navigate(['/tools', this.toolId]);
           },
           error: (err) => {
             console.error('Error updating tool:', err);
+            this.toastService.error(err.message || 'Failed to update tool');
           }
         });
       } else {
         this.toolService.createTool(toolData).subscribe({
           next: (tool) => {
+            this.toastService.success('Tool created successfully');
             this.router.navigate(['/tools', tool.toolId]);
           },
           error: (err) => {
             console.error('Error creating tool:', err);
+            this.toastService.error(err.message || 'Failed to create tool');
           }
         });
       }

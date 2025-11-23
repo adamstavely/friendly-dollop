@@ -13,6 +13,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { LifecycleService } from '../../services/lifecycle.service';
 import { ToolService } from '../../../tools/services/tool.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-promotion-workflow',
@@ -126,7 +127,8 @@ export class PromotionWorkflowComponent implements OnInit {
 
   constructor(
     private lifecycleService: LifecycleService,
-    private toolService: ToolService
+    private toolService: ToolService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -168,16 +170,18 @@ export class PromotionWorkflowComponent implements OnInit {
 
   promote(): void {
     if (!this.canPromote()) {
+      this.toastService.warning('Not all requirements are met. Please complete all requirements first.');
       return;
     }
     this.loading = true;
     this.lifecycleService.promoteTool(this.toolId, this.targetState).subscribe({
       next: () => {
         this.loading = false;
-        // Navigate or show success message
+        this.toastService.success(`Tool promoted to ${this.targetState} successfully`);
       },
       error: (err) => {
         console.error('Error promoting tool:', err);
+        this.toastService.error(err.message || 'Failed to promote tool');
         this.loading = false;
       }
     });

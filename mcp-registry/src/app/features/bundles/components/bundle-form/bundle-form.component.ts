@@ -15,6 +15,7 @@ import { ToolService } from '../../../tools/services/tool.service';
 import { Bundle } from '../../../../shared/models/bundle.model';
 import { Tool } from '../../../../shared/models/tool.model';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-bundle-form',
@@ -149,7 +150,8 @@ export class BundleFormComponent implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private bundleService: BundleService,
-    private toolService: ToolService
+    private toolService: ToolService,
+    private toastService: ToastService
   ) {
     this.bundleForm = this.fb.group({
       name: ['', Validators.required],
@@ -234,19 +236,23 @@ export class BundleFormComponent implements OnInit {
       if (this.isEditMode && this.bundleId) {
         this.bundleService.updateBundle(this.bundleId, bundleData).subscribe({
           next: () => {
+            this.toastService.success('Bundle updated successfully');
             this.router.navigate(['/bundles', this.bundleId]);
           },
           error: (err: any) => {
             console.error('Error updating bundle:', err);
+            this.toastService.error(err.message || 'Failed to update bundle');
           }
         });
       } else {
         this.bundleService.createBundle(bundleData).subscribe({
           next: (bundle) => {
+            this.toastService.success('Bundle created successfully');
             this.router.navigate(['/bundles', bundle.bundleId]);
           },
           error: (err: any) => {
             console.error('Error creating bundle:', err);
+            this.toastService.error(err.message || 'Failed to create bundle');
           }
         });
       }

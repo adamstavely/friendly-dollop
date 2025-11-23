@@ -23,5 +23,11 @@ export class RetirementService {
       catchError(() => of(undefined as void))
     );
   }
+
+  scheduleRetirement(toolId: string, schedule: any): Observable<void> {
+    return this.api.post<void>(`/tools/${toolId}/schedule-retirement`, schedule).pipe(
+      catchError(() => of(undefined as void))
+    );
+  }
 }
 

@@ -213,3 +213,23 @@ a {
     border-color: rgba(106, 27, 154, 0.5);
   }
 }
+
+/* Toast notifications */
+.toast {
+  &.toast-success {
+    background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%) !important;
+    color: white !important;
+  }
+  &.toast-error {
+    background: linear-gradient(135deg, #f44336 0%, #e57373 100%) !important;
+    color: white !important;
+  }
+  &.toast-warning {
+    background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%) !important;
+    color: white !important;
+  }
+  &.toast-info {
+    background: linear-gradient(135deg, #2196f3 0%, #64b5f6 100%) !important;
+    color: white !important;
+  }
+}
