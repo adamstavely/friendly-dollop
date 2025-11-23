@@ -16,6 +16,7 @@ import { Bundle } from '../../../../shared/models/bundle.model';
 import { Tool } from '../../../../shared/models/tool.model';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ToastService } from '../../../../core/services/toast.service';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 @Component({
   selector: 'app-bundle-form',
@@ -32,13 +33,17 @@ import { ToastService } from '../../../../core/services/toast.service';
     MatChipsModule,
     MatIconModule,
     MatAutocompleteModule,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="bundle-form">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ isEditMode ? 'Edit Bundle' : 'Create New Bundle' }}</mat-card-title>
+          <div class="header-content">
+            <mat-card-title>{{ isEditMode ? 'Edit Bundle' : 'Create New Bundle' }}</mat-card-title>
+            <app-help-tooltip context="bundles" tooltip="Learn about creating bundles"></app-help-tooltip>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <app-loading-spinner *ngIf="loading" message="Loading..."></app-loading-spinner>
@@ -47,6 +52,9 @@ import { ToastService } from '../../../../core/services/toast.service';
             <mat-form-field>
               <mat-label>Name</mat-label>
               <input matInput formControlName="name" required>
+              <mat-error *ngIf="bundleForm.get('name')?.hasError('required') && bundleForm.get('name')?.touched">
+                Name is required
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field>
@@ -57,20 +65,29 @@ import { ToastService } from '../../../../core/services/toast.service';
             <mat-form-field>
               <mat-label>Version</mat-label>
               <input matInput formControlName="version" required>
+              <mat-error *ngIf="bundleForm.get('version')?.hasError('required') && bundleForm.get('version')?.touched">
+                Version is required
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field>
               <mat-label>Owner Team</mat-label>
               <input matInput formControlName="ownerTeam" required>
+              <mat-error *ngIf="bundleForm.get('ownerTeam')?.hasError('required') && bundleForm.get('ownerTeam')?.touched">
+                Owner team is required
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field>
               <mat-label>Tools</mat-label>
-              <mat-select formControlName="toolIds" multiple>
+              <mat-select formControlName="toolIds" multiple required>
                 <mat-option *ngFor="let tool of availableTools" [value]="tool.toolId">
                   {{ tool.name }} ({{ tool.domain }})
                 </mat-option>
               </mat-select>
+              <mat-error *ngIf="bundleForm.get('toolIds')?.hasError('required') && bundleForm.get('toolIds')?.touched">
+                At least one tool is required
+              </mat-error>
             </mat-form-field>
 
             <div class="selected-tools">
@@ -134,6 +151,12 @@ import { ToastService } from '../../../../core/services/toast.service';
       gap: 8px;
       justify-content: flex-end;
       margin-top: 20px;
+    }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
     }
   `]
 })

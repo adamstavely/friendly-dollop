@@ -13,6 +13,7 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { LifecycleService } from '../../services/lifecycle.service';
 import { ToolService } from '../../../tools/services/tool.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
@@ -30,13 +31,17 @@ import { ToastService } from '../../../../core/services/toast.service';
     MatChipsModule,
     MatCheckboxModule,
     MatStepperModule,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="promotion-workflow">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Promote Tool</mat-card-title>
+          <div class="header-content">
+            <mat-card-title>Promote Tool</mat-card-title>
+            <app-help-tooltip context="lifecycle" tooltip="Learn about promotion workflow"></app-help-tooltip>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <app-loading-spinner *ngIf="loading" message="Loading promotion requirements..."></app-loading-spinner>
@@ -160,9 +165,11 @@ export class PromotionWorkflowComponent implements OnInit {
     this.toolService.validateTool(this.toolId).subscribe({
       next: (result) => {
         this.loadRequirements();
+        this.toastService.success('Tool validation completed');
       },
       error: (err) => {
         console.error('Error validating tool:', err);
+        this.toastService.error(err.message || 'Failed to validate tool');
         this.loading = false;
       }
     });

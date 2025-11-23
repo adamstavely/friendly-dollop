@@ -17,17 +17,26 @@ import { MatChipsModule } from '@angular/material/chips';
     .compliance-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: 6px;
+    }
+    mat-chip {
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 11px;
+      padding: 4px 10px;
+      border: none;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .pii, .phi, .hipaa, .pci {
-      background-color: #f44336;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       color: white;
-      font-size: 11px;
+      box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
     }
     .internal-only {
-      background-color: #ff9800;
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
       color: white;
-      font-size: 11px;
+      box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
     }
   `]
 })

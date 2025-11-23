@@ -22,6 +22,10 @@ import { VersionDiffComponent } from '../version-diff/version-diff.component';
 import { AuditLogComponent } from '../audit-log/audit-log.component';
 import { InspectorLauncherComponent } from '../../../inspector/components/inspector-launcher/inspector-launcher.component';
 import { InspectorService } from '../../../inspector/services/inspector.service';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ConfirmationService } from '../../../../core/services/confirmation.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-tool-detail',
@@ -46,6 +50,7 @@ import { InspectorService } from '../../../inspector/services/inspector.service'
     VersionDiffComponent,
     AuditLogComponent,
     InspectorLauncherComponent,
+    HelpTooltipComponent,
     DatePipe
   ],
   template: `
@@ -62,8 +67,13 @@ import { InspectorService } from '../../../inspector/services/inspector.service'
       <div *ngIf="tool && !loading">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ tool.name }}</mat-card-title>
-          <mat-card-subtitle>{{ tool.domain }} • {{ tool.toolId }}</mat-card-subtitle>
+          <div class="header-content">
+            <div>
+              <mat-card-title>{{ tool.name }}</mat-card-title>
+              <mat-card-subtitle>{{ tool.domain }} • {{ tool.toolId }}</mat-card-subtitle>
+            </div>
+            <app-help-tooltip context="tool-detail" tooltip="Learn about tool details"></app-help-tooltip>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <div class="tool-header">
@@ -84,6 +94,10 @@ import { InspectorService } from '../../../inspector/services/inspector.service'
               <button mat-raised-button color="primary" (click)="launchInspector()" *ngIf="canInspectTool()">
                 <mat-icon>bug_report</mat-icon>
                 Inspect
+              </button>
+              <button mat-raised-button color="warn" (click)="deleteTool()">
+                <mat-icon>delete</mat-icon>
+                Delete
               </button>
             </div>
           </div>
@@ -344,6 +358,12 @@ import { InspectorService } from '../../../inspector/services/inspector.service'
     .usage-analytics {
       margin-bottom: 16px;
     }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
   `]
 })
 export class ToolDetailComponent implements OnInit {
@@ -355,8 +375,11 @@ export class ToolDetailComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private toolService: ToolService,
-    private inspectorService: InspectorService
+    private inspectorService: InspectorService,
+    private toastService: ToastService,
+    private confirmationService: ConfirmationService
   ) {}
 
   ngOnInit(): void {
@@ -437,8 +460,24 @@ export class ToolDetailComponent implements OnInit {
 
   promoteTool(): void {
     if (!this.tool) return;
-    // Implementation for promotion workflow
-    console.log('Promote tool:', this.tool.toolId);
+    this.router.navigate(['/lifecycle/promote', this.tool.toolId]);
+  }
+
+  deleteTool(): void {
+    if (!this.tool) return;
+    this.confirmationService.confirmDelete(this.tool.name).subscribe(confirmed => {
+      if (confirmed) {
+        this.toolService.deleteTool(this.tool!.toolId).subscribe({
+          next: () => {
+            this.toastService.success(`Tool "${this.tool!.name}" deleted successfully`);
+            this.router.navigate(['/tools']);
+          },
+          error: (err) => {
+            this.toastService.error(err.message || 'Failed to delete tool');
+          }
+        });
+      }
+    });
   }
 
   canInspectTool(): boolean {

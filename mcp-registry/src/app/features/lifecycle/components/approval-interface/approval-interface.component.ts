@@ -17,6 +17,7 @@ import { Tool } from '../../../../shared/models/tool.model';
 import { ToastService } from '../../../../core/services/toast.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 export interface ApprovalRequest {
   id: string;
@@ -48,13 +49,17 @@ export interface ApprovalRequest {
     MatTabsModule,
     MatTableModule,
     LoadingSpinnerComponent,
-    ErrorDisplayComponent
+    ErrorDisplayComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="approval-interface">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Approval Workflow</mat-card-title>
+          <div class="header-content">
+            <mat-card-title>Approval Workflow</mat-card-title>
+            <app-help-tooltip context="lifecycle" tooltip="Learn about approvals"></app-help-tooltip>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <app-loading-spinner *ngIf="loading" message="Loading approvals..."></app-loading-spinner>
@@ -79,14 +84,26 @@ export interface ApprovalRequest {
                     <mat-form-field>
                       <mat-label>Target Lifecycle State</mat-label>
                       <input matInput formControlName="targetState" required>
+                      <mat-error *ngIf="approvalForm.get('targetState')?.hasError('required') && approvalForm.get('targetState')?.touched">
+                        Target state is required
+                      </mat-error>
                     </mat-form-field>
                     <mat-form-field>
                       <mat-label>Justification</mat-label>
                       <textarea matInput formControlName="justification" rows="4" required></textarea>
+                      <mat-error *ngIf="approvalForm.get('justification')?.hasError('required') && approvalForm.get('justification')?.touched">
+                        Justification is required
+                      </mat-error>
                     </mat-form-field>
                     <mat-form-field>
                       <mat-label>Approver Email</mat-label>
                       <input matInput type="email" formControlName="approverEmail" required>
+                      <mat-error *ngIf="approvalForm.get('approverEmail')?.hasError('required') && approvalForm.get('approverEmail')?.touched">
+                        Approver email is required
+                      </mat-error>
+                      <mat-error *ngIf="approvalForm.get('approverEmail')?.hasError('email') && approvalForm.get('approverEmail')?.touched">
+                        Please enter a valid email address
+                      </mat-error>
                     </mat-form-field>
                     <div class="form-actions">
                       <button mat-raised-button color="primary" type="submit" [disabled]="approvalForm.invalid">

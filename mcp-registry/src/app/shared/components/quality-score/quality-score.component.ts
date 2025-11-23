@@ -21,13 +21,15 @@ import { MatTooltipModule } from '@angular/material/tooltip';
     .quality-score-container {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       width: 200px;
     }
     .score-value {
-      min-width: 60px;
-      font-weight: bold;
-      color: #d1c4e9;
+      min-width: 65px;
+      font-weight: 600;
+      font-size: 13px;
+      color: #e8eaf6;
+      letter-spacing: 0.01em;
     }
   `]
 })

@@ -17,6 +17,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmationService } from '../../../../core/services/confirmation.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 @Component({
   selector: 'app-retirement-scheduler',
@@ -34,13 +35,17 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
     MatNativeDateModule,
     MatChipsModule,
     LoadingSpinnerComponent,
-    ErrorDisplayComponent
+    ErrorDisplayComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="retirement-scheduler">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Schedule Tool Retirement</mat-card-title>
+          <div class="header-content">
+            <mat-card-title>Schedule Tool Retirement</mat-card-title>
+            <app-help-tooltip context="retirement" tooltip="Learn about retirement scheduling"></app-help-tooltip>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <app-loading-spinner *ngIf="loading" message="Loading retirement options..."></app-loading-spinner>
@@ -64,6 +69,9 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
                 <input matInput [matDatepicker]="picker" formControlName="retirementDate" required>
                 <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
                 <mat-datepicker #picker></mat-datepicker>
+                <mat-error *ngIf="retirementForm.get('retirementDate')?.hasError('required') && retirementForm.get('retirementDate')?.touched">
+                  Retirement date is required
+                </mat-error>
               </mat-form-field>
 
               <mat-form-field>

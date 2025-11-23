@@ -57,5 +57,11 @@ export class BundleService {
       })
     );
   }
+
+  deleteBundle(id: string): Observable<void> {
+    return this.api.delete<void>(`/bundles/${id}`).pipe(
+      catchError(() => of(undefined as void))
+    );
+  }
 }
 

@@ -189,13 +189,14 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
   `,
   styles: [`
     .tool-list-container {
-      padding: 20px;
+      padding: 0;
     }
     .filters {
       display: flex;
       gap: 16px;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       flex-wrap: wrap;
+      align-items: flex-end;
     }
     .filters mat-form-field {
       flex: 1;
@@ -203,12 +204,17 @@ import { EmptyStateComponent } from '../../../../shared/components/empty-state/e
     }
     .tools-table {
       width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
     }
     .tools-table a {
-      color: inherit;
+      color: #6366f1;
       text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
     }
     .tools-table a:hover {
+      color: #8b5cf6;
       text-decoration: underline;
     }
   `]

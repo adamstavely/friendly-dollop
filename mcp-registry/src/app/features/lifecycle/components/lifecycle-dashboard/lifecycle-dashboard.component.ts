@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatGridListModule } from '@angular/material/grid-list';
@@ -11,6 +12,7 @@ import { ToolService } from '../../../tools/services/tool.service';
 import { Tool } from '../../../../shared/models/tool.model';
 import { LifecycleStateComponent } from '../../../../shared/components/lifecycle-state/lifecycle-state.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 @Component({
   selector: 'app-lifecycle-dashboard',
@@ -20,22 +22,27 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
     RouterModule,
     MatCardModule,
     MatButtonModule,
+    MatIconModule,
     MatTabsModule,
     MatChipsModule,
     MatGridListModule,
     LifecycleStateComponent,
-    LoadingSpinnerComponent
+    LoadingSpinnerComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="lifecycle-dashboard">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Lifecycle Management Dashboard</mat-card-title>
-          <div class="header-actions">
-            <button mat-raised-button color="primary" routerLink="/lifecycle/approvals">
-              <mat-icon>gavel</mat-icon>
-              Approvals
-            </button>
+          <div class="header-content">
+            <mat-card-title>Lifecycle Management Dashboard</mat-card-title>
+            <div class="header-actions">
+              <app-help-tooltip context="lifecycle" tooltip="Learn about lifecycle management"></app-help-tooltip>
+              <button mat-raised-button color="primary" routerLink="/lifecycle/approvals">
+                <mat-icon>gavel</mat-icon>
+                Approvals
+              </button>
+            </div>
           </div>
         </mat-card-header>
         <mat-card-content>
@@ -104,14 +111,16 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
     .tool-card {
       height: 100%;
     }
-    .header-actions {
-      margin-left: auto;
-    }
-    mat-card-header {
+    .header-content {
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
+    }
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
     }
     .tool-card a {
       text-decoration: none;

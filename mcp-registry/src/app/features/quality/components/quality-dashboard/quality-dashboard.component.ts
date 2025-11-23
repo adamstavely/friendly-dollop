@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatSortModule, Sort } from '@angular/material/sort';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { QualityService } from '../../services/quality.service';
 import { ToolService } from '../../../tools/services/tool.service';
 import { Tool } from '../../../../shared/models/tool.model';
@@ -12,6 +13,7 @@ import { QualityScoreComponent } from '../../../../shared/components/quality-sco
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { QualityMetricsComponent } from '../quality-metrics/quality-metrics.component';
 import { QualityTrendsComponent } from '../quality-trends/quality-trends.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 @Component({
   selector: 'app-quality-dashboard',
@@ -23,21 +25,26 @@ import { QualityTrendsComponent } from '../quality-trends/quality-trends.compone
     MatTableModule,
     MatSortModule,
     MatButtonModule,
+    MatIconModule,
     QualityScoreComponent,
     LoadingSpinnerComponent,
     QualityMetricsComponent,
-    QualityTrendsComponent
+    QualityTrendsComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="quality-dashboard">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Quality Dashboard</mat-card-title>
-          <div class="header-actions">
-            <button mat-raised-button color="primary" routerLink="/quality/feedback">
-              <mat-icon>feedback</mat-icon>
-              Submit Feedback
-            </button>
+          <div class="header-content">
+            <mat-card-title>Quality Dashboard</mat-card-title>
+            <div class="header-actions">
+              <app-help-tooltip context="quality" tooltip="Learn about quality metrics"></app-help-tooltip>
+              <button mat-raised-button color="primary" routerLink="/quality/feedback">
+                <mat-icon>feedback</mat-icon>
+                Submit Feedback
+              </button>
+            </div>
           </div>
         </mat-card-header>
         <mat-card-content>

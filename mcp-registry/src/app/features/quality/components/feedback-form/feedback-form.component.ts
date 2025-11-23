@@ -15,6 +15,7 @@ import { Tool } from '../../../../shared/models/tool.model';
 import { ToastService } from '../../../../core/services/toast.service';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 export type FeedbackType = 'success' | 'failure' | 'latency' | 'quality';
 
@@ -33,14 +34,20 @@ export type FeedbackType = 'success' | 'failure' | 'latency' | 'quality';
     MatSliderModule,
     MatChipsModule,
     LoadingSpinnerComponent,
-    ErrorDisplayComponent
+    ErrorDisplayComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="feedback-form">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>Submit Agent Feedback</mat-card-title>
-          <mat-card-subtitle>Help improve tool quality by providing feedback</mat-card-subtitle>
+          <div class="header-content">
+            <div>
+              <mat-card-title>Submit Agent Feedback</mat-card-title>
+              <mat-card-subtitle>Help improve tool quality by providing feedback</mat-card-subtitle>
+            </div>
+            <app-help-tooltip context="quality" tooltip="Learn about feedback"></app-help-tooltip>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <app-loading-spinner *ngIf="loading" message="Loading tools..."></app-loading-spinner>
@@ -60,6 +67,9 @@ export type FeedbackType = 'success' | 'failure' | 'latency' | 'quality';
                   {{ tool.name }} ({{ tool.toolId }})
                 </mat-option>
               </mat-select>
+              <mat-error *ngIf="feedbackForm.get('toolId')?.hasError('required') && feedbackForm.get('toolId')?.touched">
+                Tool selection is required
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field>
@@ -70,6 +80,9 @@ export type FeedbackType = 'success' | 'failure' | 'latency' | 'quality';
                 <mat-option value="latency">Latency Issue</mat-option>
                 <mat-option value="quality">Quality Issue</mat-option>
               </mat-select>
+              <mat-error *ngIf="feedbackForm.get('feedbackType')?.hasError('required') && feedbackForm.get('feedbackType')?.touched">
+                Feedback type is required
+              </mat-error>
             </mat-form-field>
 
             <div class="rating-section" *ngIf="feedbackForm.get('feedbackType')?.value === 'quality'">

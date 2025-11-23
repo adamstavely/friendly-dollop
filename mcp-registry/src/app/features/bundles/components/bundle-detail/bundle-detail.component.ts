@@ -14,6 +14,9 @@ import { Bundle } from '../../../../shared/models/bundle.model';
 import { Tool } from '../../../../shared/models/tool.model';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
+import { ToastService } from '../../../../core/services/toast.service';
+import { ConfirmationService } from '../../../../core/services/confirmation.service';
 
 @Component({
   selector: 'app-bundle-detail',
@@ -29,7 +32,8 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
     MatSlideToggleModule,
     DatePipe,
     LoadingSpinnerComponent,
-    ErrorDisplayComponent
+    ErrorDisplayComponent,
+    HelpTooltipComponent
   ],
   template: `
     <div class="bundle-detail">
@@ -45,8 +49,13 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
       <div *ngIf="bundle && !loading">
         <mat-card>
           <mat-card-header>
-            <mat-card-title>{{ bundle.name }}</mat-card-title>
-            <mat-card-subtitle>Version {{ bundle.version }} • {{ bundle.bundleId }}</mat-card-subtitle>
+            <div class="header-content">
+              <div>
+                <mat-card-title>{{ bundle.name }}</mat-card-title>
+                <mat-card-subtitle>Version {{ bundle.version }} • {{ bundle.bundleId }}</mat-card-subtitle>
+              </div>
+              <app-help-tooltip context="bundles" tooltip="Learn about bundles"></app-help-tooltip>
+            </div>
           </mat-card-header>
           <mat-card-content>
             <div class="bundle-header">
@@ -62,6 +71,10 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
                 <button mat-raised-button color="primary" [routerLink]="['/bundles', bundle.bundleId, 'edit']">
                   <mat-icon>edit</mat-icon>
                   Edit
+                </button>
+                <button mat-raised-button color="warn" (click)="deleteBundle()">
+                  <mat-icon>delete</mat-icon>
+                  Delete
                 </button>
               </div>
             </div>
@@ -151,6 +164,12 @@ import { ErrorDisplayComponent } from '../../../../shared/components/error-displ
       margin-top: 24px;
       margin-bottom: 12px;
     }
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
   `]
 })
 export class BundleDetailComponent implements OnInit {
@@ -163,7 +182,9 @@ export class BundleDetailComponent implements OnInit {
     private route: ActivatedRoute,
     private bundleService: BundleService,
     private toolService: ToolService,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService,
+    private confirmationService: ConfirmationService
   ) {}
 
   ngOnInit(): void {
@@ -213,9 +234,28 @@ export class BundleDetailComponent implements OnInit {
         if (this.bundle) {
           this.bundle.active = active;
         }
+        this.toastService.success(`Bundle ${active ? 'activated' : 'deactivated'} successfully`);
       },
       error: (err: any) => {
         console.error('Error updating bundle:', err);
+        this.toastService.error(err.message || 'Failed to update bundle status');
+      }
+    });
+  }
+
+  public deleteBundle(): void {
+    if (!this.bundle) return;
+    this.confirmationService.confirmDelete(this.bundle.name).subscribe(confirmed => {
+      if (confirmed) {
+        this.bundleService.deleteBundle(this.bundle!.bundleId).subscribe({
+          next: () => {
+            this.toastService.success(`Bundle "${this.bundle!.name}" deleted successfully`);
+            this.router.navigate(['/bundles']);
+          },
+          error: (err) => {
+            this.toastService.error(err.message || 'Failed to delete bundle');
+          }
+        });
       }
     });
   }

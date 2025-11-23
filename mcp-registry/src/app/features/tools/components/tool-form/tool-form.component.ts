@@ -15,6 +15,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { ToolService } from '../../services/tool.service';
 import { Tool } from '../../../../shared/models/tool.model';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
+import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip/help-tooltip.component';
 
 @Component({
   selector: 'app-tool-form',
@@ -31,13 +32,17 @@ import { COMMA, ENTER } from '@angular/cdk/keycodes';
     MatChipsModule,
     MatIconModule,
     MatAutocompleteModule,
-    MatExpansionModule
+    MatExpansionModule,
+    HelpTooltipComponent
   ],
   template: `
     <div class="tool-form-container">
       <mat-card>
         <mat-card-header>
-          <mat-card-title>{{ isEditMode ? 'Edit Tool' : 'Create New Tool' }}</mat-card-title>
+          <div class="header-content">
+            <mat-card-title>{{ isEditMode ? 'Edit Tool' : 'Create New Tool' }}</mat-card-title>
+            <app-help-tooltip context="tool-form" tooltip="Learn about creating tools"></app-help-tooltip>
+          </div>
         </mat-card-header>
         <mat-card-content>
           <form [formGroup]="toolForm" (ngSubmit)="onSubmit()">
@@ -75,6 +80,9 @@ import { COMMA, ENTER } from '@angular/cdk/keycodes';
                 <mat-option value="restricted">Restricted</mat-option>
                 <mat-option value="highly-restricted">Highly Restricted</mat-option>
               </mat-select>
+              <mat-error *ngIf="toolForm.get('securityClass')?.hasError('required') && toolForm.get('securityClass')?.touched">
+                Security class is required
+              </mat-error>
             </mat-form-field>
 
             <mat-form-field>

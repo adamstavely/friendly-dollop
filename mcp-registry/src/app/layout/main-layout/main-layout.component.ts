@@ -8,8 +8,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { filter } from 'rxjs/operators';
 import { GlobalSearchComponent } from '../../shared/components/global-search/global-search.component';
+import { KeyboardShortcutsHelpComponent } from '../../shared/components/keyboard-shortcuts-help/keyboard-shortcuts-help.component';
 
 @Component({
   selector: 'app-main-layout',
@@ -139,8 +141,11 @@ import { GlobalSearchComponent } from '../../shared/components/global-search/glo
           <span>MCP Registry</span>
           <span class="spacer"></span>
           <app-global-search></app-global-search>
-          <button mat-icon-button routerLink="/help" matTooltip="Help & Documentation">
+          <button mat-icon-button routerLink="/help" matTooltip="Help & Documentation (Ctrl+H)">
             <mat-icon>help_outline</mat-icon>
+          </button>
+          <button mat-icon-button (click)="showKeyboardShortcuts()" matTooltip="Keyboard Shortcuts (Shift+?)">
+            <mat-icon>keyboard</mat-icon>
           </button>
         </mat-toolbar>
         <div class="content">
@@ -155,59 +160,70 @@ import { GlobalSearchComponent } from '../../shared/components/global-search/glo
       background: transparent;
     }
     mat-sidenav {
-      width: 250px;
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+      width: 260px;
+    }
+    mat-nav-list {
+      padding: 12px 8px;
     }
     mat-nav-list a {
       display: flex;
       align-items: center;
       gap: 12px;
-      padding: 12px 16px;
-      margin: 4px 8px;
-      border-radius: 8px;
-    }
-    mat-nav-list a.active {
-      background: linear-gradient(90deg, rgba(74, 20, 140, 0.5) 0%, rgba(106, 27, 154, 0.3) 100%);
-      border-left: 3px solid #7b1fa2;
+      padding: 10px 16px;
+      margin: 2px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
     mat-nav-list a mat-icon {
-      color: #9575cd;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      opacity: 0.8;
     }
     mat-nav-list a.active mat-icon {
-      color: #d1c4e9;
+      opacity: 1;
     }
     .nav-group {
       box-shadow: none;
       border: none;
       background: transparent;
+      margin: 4px 0;
     }
     .nav-group ::ng-deep .mat-expansion-panel-header {
-      padding: 12px 16px;
-      margin: 4px 8px;
-      border-radius: 8px;
-    }
-    .nav-group ::ng-deep .mat-expansion-panel-header:hover {
-      background: rgba(74, 20, 140, 0.2);
+      padding: 10px 16px;
+      margin: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .nav-group ::ng-deep .mat-expansion-panel-header mat-panel-title {
       display: flex;
       align-items: center;
       gap: 12px;
+      color: rgba(184, 185, 214, 0.7);
     }
     .nav-group ::ng-deep .mat-expansion-panel-header mat-panel-title mat-icon {
-      color: #9575cd;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
     .nav-group ::ng-deep .mat-expansion-panel-body {
       padding: 0;
     }
     .nav-group mat-nav-list {
-      padding: 0;
+      padding: 4px 0;
     }
     .nav-group mat-nav-list a {
       padding-left: 48px;
+      font-size: 13px;
+      font-weight: 400;
     }
     .content {
-      padding: 24px;
+      padding: 32px;
       background: transparent;
       min-height: calc(100vh - 64px);
     }
@@ -218,6 +234,9 @@ import { GlobalSearchComponent } from '../../shared/components/global-search/glo
       display: flex;
       align-items: center;
       gap: 16px;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: -0.02em;
     }
     .spacer {
       flex: 1;
@@ -227,7 +246,10 @@ import { GlobalSearchComponent } from '../../shared/components/global-search/glo
 export class MainLayoutComponent implements OnInit {
   private expandedGroups: Set<string> = new Set();
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private dialog: MatDialog
+  ) {}
 
   ngOnInit(): void {
     // Load expanded groups from localStorage
@@ -285,6 +307,12 @@ export class MainLayoutComponent implements OnInit {
 
   private saveExpandedGroups(): void {
     localStorage.setItem('nav-expanded-groups', JSON.stringify(Array.from(this.expandedGroups)));
+  }
+
+  showKeyboardShortcuts(): void {
+    this.dialog.open(KeyboardShortcutsHelpComponent, {
+      width: '500px'
+    });
   }
 }
 
