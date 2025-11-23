@@ -11,6 +11,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { DatePipe } from '@angular/common';
 import { ToolService } from '../../services/tool.service';
 import { Tool } from '../../../../shared/models/tool.model';
+import { environment } from '../../../../../environments/environment';
+import { ObservabilityService } from '../../../observability/services/observability.service';
 import { LifecycleStateComponent } from '../../../../shared/components/lifecycle-state/lifecycle-state.component';
 import { QualityScoreComponent } from '../../../../shared/components/quality-score/quality-score.component';
 import { ComplianceTagsComponent } from '../../../../shared/components/compliance-tags/compliance-tags.component';
@@ -322,6 +324,32 @@ import { Workflow } from '../../../../shared/models/workflow.model';
                 </div>
               </div>
             </mat-tab>
+
+            <mat-tab label="Observability" *ngIf="langfuseEnabled">
+              <div class="tab-content">
+                <h3>LangFuse Traces for This Tool</h3>
+                <div *ngIf="toolTraces && toolTraces.length > 0">
+                  <mat-list>
+                    <mat-list-item *ngFor="let trace of toolTraces">
+                      <a [routerLink]="['/observability/traces', trace.id]">
+                        {{ trace.name || trace.id }}
+                      </a>
+                      <span matListItemLine>
+                        {{ trace.timestamp | date:'short' }}
+                      </span>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+                <div *ngIf="!toolTraces || toolTraces.length === 0" class="empty-state">
+                  <p>No traces found for this tool.</p>
+                  <p class="hint">Traces are automatically created when this tool is used in workflows.</p>
+                  <button mat-raised-button color="primary" [routerLink]="['/observability']" style="margin-top: 16px;">
+                    <mat-icon>visibility</mat-icon>
+                    View All Traces
+                  </button>
+                </div>
+              </div>
+            </mat-tab>
           </mat-tab-group>
         </mat-card-content>
       </mat-card>
@@ -393,6 +421,15 @@ import { Workflow } from '../../../../shared/models/workflow.model';
       align-items: flex-start;
       width: 100%;
     }
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: #999;
+    }
+    .hint {
+      font-size: 14px;
+      margin-top: 8px;
+    }
   `]
 })
 export class ToolDetailComponent implements OnInit {
@@ -402,6 +439,8 @@ export class ToolDetailComponent implements OnInit {
   healthStatus: any = null;
   usageData: any = null;
   workflowsUsingTool: Workflow[] = [];
+  toolTraces: any[] = [];
+  langfuseEnabled: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -410,8 +449,11 @@ export class ToolDetailComponent implements OnInit {
     private inspectorService: InspectorService,
     private toastService: ToastService,
     private confirmationService: ConfirmationService,
-    private workflowService: WorkflowService
-  ) {}
+    private workflowService: WorkflowService,
+    private observabilityService: ObservabilityService
+  ) {
+    this.langfuseEnabled = environment.langfuse?.enabled || false;
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -430,6 +472,9 @@ export class ToolDetailComponent implements OnInit {
         this.loadHealthStatus(id);
         this.loadUsageData(id);
         this.loadWorkflowsUsingTool(id);
+        if (this.langfuseEnabled) {
+          this.loadToolTraces(id);
+        }
       },
       error: (err) => {
         console.error('Error loading tool:', err);
@@ -520,6 +565,23 @@ export class ToolDetailComponent implements OnInit {
   launchInspector(): void {
     if (!this.tool) return;
     this.inspectorService.launchInspectorForTool(this.tool);
+  }
+
+  loadToolTraces(toolId: string): void {
+    this.toolService.getToolTraces(toolId).subscribe({
+      next: (traces) => {
+        this.toolTraces = traces;
+      },
+      error: (err) => {
+        console.error('Error loading tool traces:', err);
+        // Try to get traces from observability service
+        this.observabilityService.getTraces({ workflowId: toolId }).subscribe({
+          next: (result) => {
+            this.toolTraces = result.traces;
+          }
+        });
+      }
+    });
   }
 
   loadWorkflowsUsingTool(toolId: string): void {

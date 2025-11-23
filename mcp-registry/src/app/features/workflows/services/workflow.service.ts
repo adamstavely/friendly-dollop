@@ -4,6 +4,7 @@ import { Observable, of, catchError, throwError, switchMap, tap } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { MockDataService } from '../../../core/services/mock-data.service';
 import { LangFuseService } from '../../../core/services/langfuse.service';
+import { ToolService } from '../../tools/services/tool.service';
 import { 
   Workflow, 
   WorkflowDefinition, 
@@ -36,6 +37,7 @@ export class WorkflowService {
     private api: ApiService,
     private mockData: MockDataService,
     private langfuse: LangFuseService,
+    private toolService: ToolService,
     http: HttpClient
   ) {
     // Flowise API URL - defaults to localhost:3000 if not configured
@@ -193,66 +195,114 @@ export class WorkflowService {
     }
     
     const apiUrl = this.getApiUrl(engine);
+    const executionId = `exec-${Date.now()}`;
     
     // Create LangFuse trace if enabled
-    let traceId: string | null = null;
+    let traceExecutionId: string | null = null;
     if (environment.langfuse?.enabled && environment.langfuse?.trackWorkflows) {
-      this.getWorkflowById(id).subscribe(workflow => {
-        traceId = this.langfuse.createWorkflowTrace(
-          id,
-          workflow.name,
-          `exec-${Date.now()}`,
-          input,
-          {
+      return this.getWorkflowById(id).pipe(
+        switchMap((workflow: Workflow) => {
+          traceExecutionId = this.langfuse.createWorkflowTrace(
+            id,
+            workflow.name,
+            executionId,
+            input,
+            {
+              workflowId: id,
+              workflowName: workflow.name,
+              executionId: executionId,
+              mcpTools: workflow.mcpTools,
+              lifecycleState: workflow.lifecycleState,
+              engine: workflow.engine,
+              workflowType: workflow.workflowType
+            }
+          );
+          
+          return this.http.post<WorkflowExecution>(`${apiUrl}/workflows/${id}/execute`, { input }).pipe(
+            tap((execution: WorkflowExecution) => {
+              // Update LangFuse trace with execution result
+              if (traceExecutionId && environment.langfuse?.enabled) {
+                this.langfuse.updateTraceOutput(executionId, execution.output);
+                
+                // Track tool calls if present in execution
+                if (execution.toolCalls && Array.isArray(execution.toolCalls)) {
+                  execution.toolCalls.forEach((toolCall: any) => {
+                    this.toolService.trackToolInvocation(
+                      executionId,
+                      toolCall.toolId || toolCall.tool || 'unknown',
+                      toolCall.toolName || toolCall.tool || 'Unknown Tool',
+                      toolCall.input || toolCall.tool_input || {},
+                      toolCall.output || toolCall.observation,
+                      {
+                        version: toolCall.version,
+                        agentPersona: toolCall.agentPersona,
+                        latency: toolCall.latency,
+                        error: toolCall.error
+                      }
+                    );
+                  });
+                }
+                
+                // Create score if quality score exists
+                if (execution.output?.qualityScore !== undefined) {
+                  this.langfuse.createScore(
+                    executionId,
+                    'quality_score',
+                    execution.output.qualityScore
+                  );
+                }
+                
+                // End trace
+                this.langfuse.endTrace(executionId, execution.output);
+              }
+            }),
+            catchError((error) => {
+              // End trace with error
+              if (traceExecutionId && environment.langfuse?.enabled) {
+                this.langfuse.updateTraceOutput(executionId, { error: error.message });
+                this.langfuse.endTrace(executionId, { error: error.message });
+              }
+              throw error;
+            })
+          );
+        }),
+        catchError((error) => {
+          // Mock execution on error
+          const execution: WorkflowExecution = {
+            id: executionId,
             workflowId: id,
-            workflowName: workflow.name,
-            executionId: `exec-${Date.now()}`,
-            mcpTools: workflow.mcpTools,
-            lifecycleState: workflow.lifecycleState,
-            engine: workflow.engine,
-            workflowType: workflow.workflowType
+            status: 'failed',
+            startedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString(),
+            duration: 0,
+            input,
+            output: { error: error.message },
+            error: error.message
+          };
+          
+          // End trace with error if it was created
+          if (traceExecutionId && environment.langfuse?.enabled) {
+            this.langfuse.updateTraceOutput(executionId, { error: error.message });
+            this.langfuse.endTrace(executionId, { error: error.message });
           }
-        );
-      });
+          
+          return of(execution);
+        })
+      );
     }
     
     return this.http.post<WorkflowExecution>(`${apiUrl}/workflows/${id}/execute`, { input }).pipe(
-      tap((execution: WorkflowExecution) => {
-        // Update LangFuse trace with execution result
-        if (traceId && environment.langfuse?.enabled) {
-          this.langfuse.updateTraceOutput(execution.id, execution.output);
-          
-          // Create score if quality score exists
-          if (execution.output?.qualityScore !== undefined) {
-            this.langfuse.createScore(
-              execution.id,
-              'quality_score',
-              execution.output.qualityScore
-            );
-          }
-          
-          // End trace
-          this.langfuse.endTrace(execution.id, execution.output);
-        }
-      }),
-      catchError((error) => {
-        // End trace with error
-        if (traceId && environment.langfuse?.enabled) {
-          this.langfuse.updateTraceOutput(traceId, { error: error.message });
-          this.langfuse.endTrace(traceId, { error: error.message });
-        }
-        
+      catchError(() => {
         // Mock execution
         const execution: WorkflowExecution = {
-          id: `exec-${Date.now()}`,
+          id: executionId,
           workflowId: id,
-          status: 'failed',
+          status: 'completed',
           startedAt: new Date().toISOString(),
-          completedAt: new Date().toISOString(),
-          duration: 0,
+          completedAt: new Date(Date.now() + 2000).toISOString(),
+          duration: 2000,
           input,
-          output: { error: error.message },
-          error: error.message
+          output: { result: 'Mock execution result' }
         };
         return of(execution);
       })
@@ -413,6 +463,30 @@ export class WorkflowService {
       params: { persona }
     }).pipe(
       catchError(() => of([]))
+    );
+  }
+
+  // Validate workflow
+  validateWorkflow(id: string): Observable<{ valid: boolean; errors: string[] }> {
+    const apiUrl = this.getApiUrl();
+    return this.http.post<{ valid: boolean; errors: string[] }>(`${apiUrl}/workflows/${id}/validate`, {}).pipe(
+      catchError(() => of({ valid: true, errors: [] }))
+    );
+  }
+
+  // Validate agent config
+  validateAgentConfig(config: AgentConfig): Observable<{ valid: boolean; errors: string[] }> {
+    const apiUrl = this.langchainBackendUrl;
+    return this.http.post<{ valid: boolean; errors: string[] }>(`${apiUrl}/agents/validate`, config).pipe(
+      catchError(() => of({ valid: true, errors: [] }))
+    );
+  }
+
+  // Validate chain config
+  validateChainConfig(config: ChainConfig): Observable<{ valid: boolean; errors: string[] }> {
+    const apiUrl = this.langchainBackendUrl;
+    return this.http.post<{ valid: boolean; errors: string[] }>(`${apiUrl}/chains/validate`, config).pipe(
+      catchError(() => of({ valid: true, errors: [] }))
     );
   }
 

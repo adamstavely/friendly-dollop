@@ -12,5 +12,13 @@ export const observabilityRoutes: Routes = [
   {
     path: 'traces/:id',
     loadComponent: () => import('./components/trace-detail/trace-detail.component').then(m => m.TraceDetailComponent)
+  },
+  {
+    path: 'generations/:id',
+    loadComponent: () => import('./components/generation-viewer/generation-viewer.component').then(m => m.GenerationViewerComponent)
+  },
+  {
+    path: 'scores',
+    loadComponent: () => import('./components/score-analytics/score-analytics.component').then(m => m.ScoreAnalyticsComponent)
   }
 ];

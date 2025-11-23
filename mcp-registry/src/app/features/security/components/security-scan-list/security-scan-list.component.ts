@@ -21,7 +21,7 @@ import { SecurityScan } from '../../../../shared/models/security.model';
             <ng-container matColumnDef="traceId">
               <th mat-header-cell *matHeaderCellDef>Trace ID</th>
               <td mat-cell *matCellDef="let scan">
-                <a [routerLink]="['/security/scans', scan.id]">{{ scan.traceId }}</a>
+                <a [routerLink]="['/security/scan', scan.traceId]">{{ scan.traceId }}</a>
               </td>
             </ng-container>
             <ng-container matColumnDef="score">

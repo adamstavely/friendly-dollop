@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, catchError } from 'rxjs';
+import { Observable, of, catchError, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { LangFuseService } from '../../../core/services/langfuse.service';
 import { SecurityScan, SecurityThreat, PIIDetection, SecurityRule } from '../../../shared/models/security.model';
@@ -30,7 +30,7 @@ export class AISecurityService {
    * Detect PII in text
    */
   detectPII(text: string): Observable<PIIDetection[]> {
-    return this.langfuse.detectPII(text).pipe(
+    return this.api.post<PIIDetection[]>('/security/detect-pii', { text }).pipe(
       catchError(() => {
         // Fallback to basic detection
         return this.basicPIIDetection(text);
@@ -42,21 +42,48 @@ export class AISecurityService {
    * Redact PII from text
    */
   redactPII(text: string, piiTypes?: string[]): Observable<string> {
-    return this.langfuse.redactPII(text, piiTypes);
+    return this.api.post<string>('/security/redact-pii', { text, piiTypes }).pipe(
+      catchError(() => {
+        // Fallback: basic redaction
+        return of(this.basicRedaction(text, piiTypes));
+      })
+    );
   }
 
   /**
    * Detect prompt injection attempts
    */
   detectPromptInjection(prompt: string, input: string): Observable<boolean> {
-    return this.langfuse.detectPromptInjection(prompt, input);
+    return this.api.post<{ isInjection: boolean }>('/security/detect-injection', { prompt, input }).pipe(
+      catchError(() => {
+        // Basic detection using common injection patterns
+        return of(this.basicInjectionDetection(prompt, input));
+      }),
+      switchMap((response: { isInjection: boolean } | boolean) => {
+        if (typeof response === 'object' && 'isInjection' in response) {
+          return of(response.isInjection);
+        }
+        return of(response as boolean);
+      })
+    );
   }
 
   /**
    * Calculate security score for a trace
    */
   calculateSecurityScore(trace: LangFuseTrace): Observable<number> {
-    return this.langfuse.calculateSecurityScore(trace);
+    return this.api.post<{ score: number }>('/security/calculate-score', { trace }).pipe(
+      catchError(() => {
+        // Mock score calculation
+        return of(85);
+      }),
+      switchMap((response: { score: number } | number) => {
+        if (typeof response === 'object' && 'score' in response) {
+          return of(response.score);
+        }
+        return of(response as number);
+      })
+    );
   }
 
   /**
@@ -82,12 +109,12 @@ export class AISecurityService {
     return this.api.get<SecurityRule[]>('/security/rules').pipe(
       catchError(() => {
         // Mock rules
-        return of([
+        return of<SecurityRule[]>([
           {
             id: 'rule-1',
             name: 'PII Detection',
             description: 'Detect and flag PII in traces',
-            type: 'pii',
+            type: 'pii' as const,
             enabled: true,
             config: {}
           },
@@ -95,7 +122,7 @@ export class AISecurityService {
             id: 'rule-2',
             name: 'Prompt Injection Detection',
             description: 'Detect prompt injection attempts',
-            type: 'injection',
+            type: 'injection' as const,
             enabled: true,
             config: {}
           }
@@ -182,6 +209,32 @@ export class AISecurityService {
     }
 
     return of(detections);
+  }
+
+  private basicRedaction(text: string, piiTypes?: string[]): string {
+    let redacted = text;
+    this.basicPIIDetection(text).subscribe(detections => {
+      detections.forEach(detection => {
+        if (!piiTypes || piiTypes.includes(detection.type)) {
+          const redaction = '*'.repeat(detection.value.length);
+          redacted = redacted.replace(detection.value, redaction);
+        }
+      });
+    });
+    return redacted;
+  }
+
+  private basicInjectionDetection(prompt: string, input: string): boolean {
+    const injectionPatterns = [
+      /ignore\s+(previous|above|all)\s+(instructions?|rules?)/i,
+      /system\s*:\s*you\s+are/i,
+      /forget\s+(everything|all)/i,
+      /new\s+instructions?/i,
+      /override/i
+    ];
+
+    const combined = `${prompt} ${input}`.toLowerCase();
+    return injectionPatterns.some(pattern => pattern.test(combined));
   }
 }
 

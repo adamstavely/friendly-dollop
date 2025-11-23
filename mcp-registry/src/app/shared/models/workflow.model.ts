@@ -43,6 +43,7 @@ export interface WorkflowNode {
   position: { x: number; y: number };
   data: any;
   mcpToolId?: string; // If this node uses an MCP tool
+  promptId?: string; // If this node uses a prompt from the repository
 }
 
 export interface WorkflowConnection {

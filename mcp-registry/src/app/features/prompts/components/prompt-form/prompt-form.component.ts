@@ -44,10 +44,10 @@ import { ToastService } from '../../../../core/services/toast.service';
             <mat-form-field class="full-width">
               <mat-label>Prompt</mat-label>
               <textarea matInput [(ngModel)]="prompt.prompt" name="prompt" rows="10" required></textarea>
-              <mat-hint>Use {{variable}} syntax for variables</mat-hint>
+              <mat-hint>Use double curly braces for variables</mat-hint>
             </mat-form-field>
 
-            <div class="form-row">
+            <div class="form-row" *ngIf="prompt.config">
               <mat-form-field>
                 <mat-label>Temperature</mat-label>
                 <input matInput type="number" [(ngModel)]="prompt.config.temperature" name="temperature" min="0" max="2" step="0.1">
@@ -141,7 +141,11 @@ export class PromptFormComponent implements OnInit {
     this.promptService.getPrompt(id).subscribe({
       next: (prompt) => {
         if (prompt) {
-          this.prompt = { ...prompt };
+          this.prompt = {
+            ...prompt,
+            config: prompt.config || { temperature: 0.7, maxTokens: 1000 },
+            tags: prompt.tags || []
+          };
         }
       },
       error: (err) => {

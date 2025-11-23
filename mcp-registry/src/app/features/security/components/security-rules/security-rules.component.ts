@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
@@ -9,7 +10,7 @@ import { SecurityRule } from '../../../../shared/models/security.model';
 @Component({
   selector: 'app-security-rules',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatTableModule, MatSlideToggleModule],
+  imports: [CommonModule, FormsModule, MatCardModule, MatTableModule, MatSlideToggleModule],
   template: `
     <div class="rules-container">
       <mat-card>

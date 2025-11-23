@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # Workflow Engine Configuration
     default_engine: str = "flowise"  # flowise, langchain, langgraph
     
+    # LangFuse Configuration
+    langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_public_key: Optional[str] = None
+    langfuse_secret_key: Optional[str] = None
+    langfuse_project_id: Optional[str] = None
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 from app.models.workflow import AgentConfig
 from app.services.agent_service import AgentService
 from app.services.mcp_adapter import MCPAdapter
+from app.utils.workflow_validator import WorkflowValidator
 
 router = APIRouter()
 _agent_service = AgentService()
@@ -41,19 +42,10 @@ async def get_agent_types():
 @router.post("/agents/validate", response_model=Dict[str, Any])
 async def validate_agent_config(agent_config: AgentConfig):
     """Validate agent configuration."""
-    errors = []
-    
-    if not agent_config.agentType:
-        errors.append("agentType is required")
-    
-    if not agent_config.llmProvider:
-        errors.append("llmProvider is required")
-    
-    if not agent_config.llmModel:
-        errors.append("llmModel is required")
+    is_valid, errors = WorkflowValidator.validate_agent_config(agent_config.dict())
     
     return {
-        "valid": len(errors) == 0,
+        "valid": is_valid,
         "errors": errors
     }
 

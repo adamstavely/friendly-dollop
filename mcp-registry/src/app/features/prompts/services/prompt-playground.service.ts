@@ -64,47 +64,43 @@ export class PromptPlaygroundService {
   ): Observable<PromptExecutionResult> {
     // Create a trace for this execution
     const traceName = 'Prompt Playground Execution';
-    let traceId: string | null = null;
+    const executionId = `playground-${Date.now()}`;
+    const traceId = this.langfuse.createWorkflowTrace(
+      'prompt-playground',
+      traceName,
+      executionId,
+      { content, variables, options },
+      { workflowId: 'prompt-playground', workflowName: traceName, executionId }
+    );
 
     return new Observable(observer => {
-      // Create trace
-      this.langfuse.createTrace({
-        name: traceName,
-        input: { content, variables, options },
-        metadata: { source: 'playground' }
-      }).subscribe(id => {
-        traceId = id || null;
+      // Mock execution (in real implementation, this would call LLM API)
+      setTimeout(() => {
+        const result: PromptExecutionResult = {
+          output: this.mockLLMResponse(content, variables),
+          latency: Math.floor(Math.random() * 2000) + 500,
+          tokenUsage: {
+            promptTokens: Math.floor(Math.random() * 1000) + 100,
+            completionTokens: Math.floor(Math.random() * 500) + 50,
+            totalTokens: 0
+          },
+          traceId: traceId || undefined
+        };
+        result.tokenUsage!.totalTokens = 
+          result.tokenUsage!.promptTokens + result.tokenUsage!.completionTokens;
 
-        // Mock execution (in real implementation, this would call LLM API)
-        setTimeout(() => {
-          const result: PromptExecutionResult = {
-            output: this.mockLLMResponse(content, variables),
-            latency: Math.floor(Math.random() * 2000) + 500,
-            tokenUsage: {
-              promptTokens: Math.floor(Math.random() * 1000) + 100,
-              completionTokens: Math.floor(Math.random() * 500) + 50,
-              totalTokens: 0
-            },
-            traceId: traceId || undefined
-          };
-          result.tokenUsage!.totalTokens = 
-            result.tokenUsage!.promptTokens + result.tokenUsage!.completionTokens;
+        // Update trace with output
+        if (executionId) {
+          this.langfuse.updateTraceOutput(executionId, {
+            output: result.output,
+            latency: result.latency,
+            tokenUsage: result.tokenUsage
+          });
+        }
 
-          // Update trace with output
-          if (traceId) {
-            this.langfuse.updateTrace(traceId, {
-              output: result.output,
-              metadata: {
-                latency: result.latency,
-                tokenUsage: result.tokenUsage
-              }
-            }).subscribe();
-          }
-
-          observer.next(result);
-          observer.complete();
-        }, 1000);
-      });
+        observer.next(result);
+        observer.complete();
+      }, 1000);
     });
   }
 

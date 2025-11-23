@@ -10,6 +10,7 @@ from app.services.workflow_executor import WorkflowExecutor
 from app.utils.engine_router import EngineRouter
 from app.utils.workflow_migrator import WorkflowMigrator
 from app.utils.workflow_converter import WorkflowConverter
+from app.utils.workflow_validator import WorkflowValidator
 from datetime import datetime
 import uuid
 
@@ -205,4 +206,44 @@ async def migrate_workflow(workflow_id: str, target_engine: WorkflowEngine):
         _workflow_definitions[workflow_id] = result["migrated_definition"]
     
     return result
+
+
+@router.post("/workflows/{workflow_id}/validate", response_model=dict)
+async def validate_workflow(workflow_id: str):
+    """Validate a workflow definition."""
+    workflow = _workflows.get(workflow_id)
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    definition = _workflow_definitions.get(workflow_id, WorkflowDefinition())
+    
+    # Validate workflow definition
+    is_valid, errors = WorkflowValidator.validate_workflow_definition(definition)
+    
+    # Validate engine-specific configuration
+    engine_errors = []
+    if workflow.engine == WorkflowEngine.LANGCHAIN:
+        if workflow.workflowType == "agent" and workflow.agentConfig:
+            agent_valid, agent_errors = WorkflowValidator.validate_agent_config(workflow.agentConfig.dict())
+            if not agent_valid:
+                engine_errors.extend([f"Agent config: {e}" for e in agent_errors])
+        elif workflow.workflowType == "chain" and workflow.chainConfig:
+            chain_valid, chain_errors = WorkflowValidator.validate_chain_config(workflow.chainConfig.dict())
+            if not chain_valid:
+                engine_errors.extend([f"Chain config: {e}" for e in chain_errors])
+    elif workflow.engine == WorkflowEngine.LANGGRAPH:
+        langgraph_valid, langgraph_errors = WorkflowValidator.validate_langgraph_config(
+            workflow.langgraphConfig or {},
+            definition
+        )
+        if not langgraph_valid:
+            engine_errors.extend([f"LangGraph config: {e}" for e in langgraph_errors])
+    
+    all_errors = errors + engine_errors
+    
+    return {
+        "valid": is_valid and len(engine_errors) == 0,
+        "errors": all_errors,
+        "workflow_id": workflow_id
+    }
 

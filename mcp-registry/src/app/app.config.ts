@@ -5,12 +5,13 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 
 import { routes } from './app.routes';
 import { httpInterceptor } from './core/interceptors/http.interceptor';
+import { langfuseInterceptor } from './core/interceptors/langfuse.interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([httpInterceptor])),
+    provideHttpClient(withInterceptors([httpInterceptor, langfuseInterceptor])),
     provideAnimations()
   ]
 };

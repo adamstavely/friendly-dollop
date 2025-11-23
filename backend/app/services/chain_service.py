@@ -5,7 +5,13 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langchain.tools import BaseTool
 from app.services.mcp_adapter import MCPAdapter
+from app.services.llm_service import LLMService
 from app.models.workflow import ChainConfig
+from app.exceptions import LLMExecutionError, WorkflowExecutionError, TransformExecutionError
+from app.utils.retry import retry_on_failure, RetryConfig
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ChainService:
@@ -13,6 +19,7 @@ class ChainService:
     
     def __init__(self):
         self.mcp_adapter = MCPAdapter()
+        self.llm_service = LLMService()
     
     async def create_chain(
         self,
@@ -34,8 +41,9 @@ class ChainService:
         llm_config: Optional[Dict[str, Any]] = None
     ):
         """Create a sequential chain."""
-        # Create LLM
-        llm = self._create_llm(llm_config or {})
+        try:
+            # Create LLM
+            llm = self._create_llm(llm_config or {})
         
         # Create chains for each node
         chains = []
@@ -62,46 +70,86 @@ class ChainService:
                 output_variables=["output"],
                 transform=lambda x: {"output": x["input"]}
             )
+        except Exception as e:
+            logger.error(f"Failed to create sequential chain: {str(e)}")
+            raise WorkflowExecutionError(
+                f"Failed to create sequential chain: {str(e)}",
+                error_code="CHAIN_CREATION_ERROR",
+                context={"chain_type": "sequential", "original_error": str(e)}
+            )
     
     def _create_transform_chain(self, config: ChainConfig):
         """Create a transform chain."""
-        transforms = config.transforms or {}
-        
-        def transform_func(inputs: Dict[str, Any]) -> Dict[str, Any]:
-            result = inputs.copy()
-            for node_id, transform in transforms.items():
-                # Apply transform (simplified)
-                if isinstance(transform, dict):
-                    # Apply transformation logic
-                    pass
-            return result
-        
-        return TransformChain(
-            input_variables=["input"],
-            output_variables=["output"],
-            transform=transform_func
-        )
+        try:
+            transforms = config.transforms or {}
+            
+            def transform_func(inputs: Dict[str, Any]) -> Dict[str, Any]:
+                try:
+                    result = inputs.copy()
+                    for node_id, transform in transforms.items():
+                        # Apply transform
+                        if isinstance(transform, dict):
+                            transform_type = transform.get("type", "passthrough")
+                            transform_config = transform.get("config", {})
+                            # Apply transformation (simplified - could use LangGraph transform service)
+                            if transform_type == "merge":
+                                merge_data = transform_config.get("data", {})
+                                if isinstance(result, dict) and isinstance(merge_data, dict):
+                                    result.update(merge_data)
+                    return result
+                except Exception as e:
+                    logger.error(f"Transform execution failed in chain: {str(e)}")
+                    raise TransformExecutionError(
+                        f"Transform execution failed: {str(e)}",
+                        transform_type=transform.get("type", "unknown") if isinstance(transform, dict) else "unknown",
+                        context={"node_id": node_id, "original_error": str(e)}
+                    )
+            
+            return TransformChain(
+                input_variables=["input"],
+                output_variables=["output"],
+                transform=transform_func
+            )
+        except TransformExecutionError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to create transform chain: {str(e)}")
+            raise WorkflowExecutionError(
+                f"Failed to create transform chain: {str(e)}",
+                error_code="CHAIN_CREATION_ERROR",
+                context={"chain_type": "transform", "original_error": str(e)}
+            )
     
     def _create_llm(self, config: Dict[str, Any]):
         """Create LLM from configuration."""
-        provider = config.get("provider", "openai")
-        model = config.get("model", "gpt-4")
-        temperature = config.get("temperature", 0.7)
-        max_tokens = config.get("max_tokens")
-        
-        if provider == "openai":
-            return ChatOpenAI(
+        try:
+            provider = config.get("provider", "openai")
+            model = config.get("model", "gpt-4")
+            temperature = config.get("temperature", 0.7)
+            max_tokens = config.get("max_tokens")
+            api_key = config.get("api_key")
+            
+            # Use LLMService for consistent LLM creation
+            return self.llm_service.create_llm(
+                provider=provider,
                 model=model,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                api_key=api_key
             )
-        else:
-            # Default to OpenAI
-            return ChatOpenAI(
-                model=model,
-                temperature=temperature
+        except Exception as e:
+            logger.error(f"Failed to create LLM: {str(e)}")
+            raise LLMExecutionError(
+                f"Failed to create LLM: {str(e)}",
+                provider=config.get("provider", "openai"),
+                model=config.get("model", "unknown"),
+                context={"original_error": str(e)}
             )
     
+    @retry_on_failure(
+        config=RetryConfig(max_attempts=3, initial_delay=1.0),
+        retryable_exceptions=(Exception,)
+    )
     async def execute_chain(self, chain, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute a chain with input."""
         try:
@@ -114,10 +162,15 @@ class ChainService:
                 "output": result,
                 "success": True
             }
+        except TransformExecutionError:
+            raise
+        except LLMExecutionError:
+            raise
         except Exception as e:
-            return {
-                "output": None,
-                "error": str(e),
-                "success": False
-            }
+            logger.error(f"Chain execution failed: {str(e)}")
+            raise WorkflowExecutionError(
+                f"Chain execution failed: {str(e)}",
+                error_code="CHAIN_EXECUTION_ERROR",
+                context={"original_error": str(e)}
+            )
 

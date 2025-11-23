@@ -18,11 +18,19 @@ export const promptsRoutes: Routes = [
     loadComponent: () => import('./components/prompt-form/prompt-form.component').then(m => m.PromptFormComponent)
   },
   {
-    path: 'playground',
+    path: ':id/playground',
     loadComponent: () => import('./components/prompt-playground/prompt-playground.component').then(m => m.PromptPlaygroundComponent)
   },
   {
     path: ':id/versions',
     loadComponent: () => import('./components/prompt-version-history/prompt-version-history.component').then(m => m.PromptVersionHistoryComponent)
+  },
+  {
+    path: ':id/compare',
+    loadComponent: () => import('./components/prompt-comparison/prompt-comparison.component').then(m => m.PromptComparisonComponent)
+  },
+  {
+    path: ':id/dataset',
+    loadComponent: () => import('./components/test-dataset/test-dataset.component').then(m => m.TestDatasetComponent)
   }
 ];

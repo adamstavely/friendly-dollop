@@ -313,4 +313,96 @@ export class LangFuseService {
       costTrends: []
     });
   }
+
+  // ==================== Security Methods ====================
+
+  /**
+   * Detect PII in text (basic implementation)
+   */
+  detectPII(text: string): Observable<Array<{ type: string; value: string; confidence: number }>> {
+    // Basic PII detection patterns
+    const patterns = {
+      email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+      phone: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g,
+      ssn: /\b\d{3}-\d{2}-\d{4}\b/g,
+      creditCard: /\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b/g,
+      ipAddress: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g
+    };
+
+    const detections: Array<{ type: string; value: string; confidence: number }> = [];
+
+    Object.entries(patterns).forEach(([type, pattern]) => {
+      const matches = text.match(pattern);
+      if (matches) {
+        matches.forEach(match => {
+          detections.push({
+            type,
+            value: match,
+            confidence: 0.8 // Basic confidence score
+          });
+        });
+      }
+    });
+
+    return of(detections);
+  }
+
+  /**
+   * Redact PII from text
+   */
+  redactPII(text: string, piiTypes?: string[]): Observable<string> {
+    return new Observable(observer => {
+      this.detectPII(text).subscribe(detections => {
+        let redacted = text;
+        detections.forEach(detection => {
+          if (!piiTypes || piiTypes.includes(detection.type)) {
+            redacted = redacted.replace(detection.value, `[REDACTED_${detection.type.toUpperCase()}]`);
+          }
+        });
+        observer.next(redacted);
+        observer.complete();
+      });
+    });
+  }
+
+  /**
+   * Detect prompt injection attempts (basic implementation)
+   */
+  detectPromptInjection(prompt: string, input: string): Observable<boolean> {
+    // Basic prompt injection detection patterns
+    const injectionPatterns = [
+      /ignore\s+(previous|above|all)\s+instructions/i,
+      /forget\s+(everything|all|previous)/i,
+      /you\s+are\s+now/i,
+      /system\s*:\s*ignore/i,
+      /###\s*new\s+instructions/i
+    ];
+
+    const combined = `${prompt} ${input}`;
+    const detected = injectionPatterns.some(pattern => pattern.test(combined));
+
+    return of(detected);
+  }
+
+  /**
+   * Calculate security score for a trace
+   */
+  calculateSecurityScore(trace: LangFuseTrace): Observable<number> {
+    // Basic security scoring (0-100)
+    let score = 100;
+
+    return new Observable(observer => {
+      // Check for PII in input/output
+      const inputStr = JSON.stringify(trace.input || {});
+      const outputStr = JSON.stringify(trace.output || {});
+
+      this.detectPII(inputStr + outputStr).subscribe(detections => {
+        score -= detections.length * 10; // Deduct 10 points per PII detection
+        score = Math.max(0, score);
+
+        observer.next(score);
+        observer.complete();
+      });
+    });
+  }
 }

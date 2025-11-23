@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, catchError } from 'rxjs';
+import { Observable, of, catchError, switchMap } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { LangFuseService } from '../../../core/services/langfuse.service';
-import { LangFuseTrace, LangFuseGeneration, LangFuseScore } from '../../../shared/models/langfuse.model';
+import { LangFuseTrace, LangFuseGeneration, LangFuseScore, LangFuseTraceFilter, LangFuseAnalytics } from '../../../shared/models/langfuse.model';
 
 export interface TraceFilters {
   userId?: string;
@@ -40,13 +40,24 @@ export class ObservabilityService {
    * Get traces with filters
    */
   getTraces(filters?: TraceFilters): Observable<{ traces: LangFuseTrace[]; total: number }> {
-    return this.api.get<{ traces: LangFuseTrace[]; total: number }>('/observability/traces', filters).pipe(
+    const params: any = {
+      limit: filters?.limit || 50,
+      page: filters?.page || 1
+    };
+
+    if (filters?.userId) params.userId = filters.userId;
+    if (filters?.sessionId) params.sessionId = filters.sessionId;
+    if (filters?.name) params.name = filters.name;
+    if (filters?.tags && filters.tags.length > 0) params.tags = filters.tags.join(',');
+    if (filters?.fromTimestamp) params.fromTimestamp = filters.fromTimestamp.toISOString();
+    if (filters?.toTimestamp) params.toTimestamp = filters.toTimestamp.toISOString();
+
+    return this.api.get<{ traces: LangFuseTrace[]; total: number; page: number; limit: number }>('/langfuse/traces', params).pipe(
       catchError(() => {
-        // Mock data fallback
-        return of({
-          traces: this.getMockTraces(),
-          total: 10
-        });
+        return of({ traces: this.getMockTraces(), total: 10 });
+      }),
+      switchMap((response) => {
+        return of({ traces: response.traces || [], total: response.total || 0 });
       })
     );
   }
@@ -55,7 +66,7 @@ export class ObservabilityService {
    * Get trace by ID
    */
   getTrace(id: string): Observable<LangFuseTrace | null> {
-    return this.api.get<LangFuseTrace>(`/observability/traces/${id}`).pipe(
+    return this.api.get<LangFuseTrace>(`/langfuse/traces/${id}`).pipe(
       catchError(() => {
         const traces = this.getMockTraces();
         return of(traces.find(t => t.id === id) || null);
@@ -67,11 +78,11 @@ export class ObservabilityService {
    * Get generations for a trace
    */
   getGenerations(traceId: string): Observable<LangFuseGeneration[]> {
-    return this.api.get<LangFuseGeneration[]>(`/observability/traces/${traceId}/generations`).pipe(
+    return this.api.get<{ generations: LangFuseGeneration[] }>(`/langfuse/traces/${traceId}/generations`).pipe(
       catchError(() => {
         // Mock generations
-        return of([
-          {
+        return of({
+          generations: [{
             id: 'gen-1',
             traceId,
             name: 'LLM Call',
@@ -83,8 +94,11 @@ export class ObservabilityService {
               completionTokens: 50,
               totalTokens: 150
             }
-          }
-        ]);
+          }]
+        });
+      }),
+      switchMap((response) => {
+        return of(response.generations || []);
       })
     );
   }
@@ -94,12 +108,17 @@ export class ObservabilityService {
    */
   getScores(traceId?: string): Observable<LangFuseScore[]> {
     const endpoint = traceId 
-      ? `/observability/traces/${traceId}/scores`
-      : '/observability/scores';
+      ? `/langfuse/traces/${traceId}/scores`
+      : '/langfuse/scores';
     
-    return this.api.get<LangFuseScore[]>(endpoint).pipe(
+    const params = traceId ? {} : { traceId };
+    
+    return this.api.get<{ scores: LangFuseScore[] }>(endpoint, params).pipe(
       catchError(() => {
-        return of([]);
+        return of({ scores: [] });
+      }),
+      switchMap((response) => {
+        return of(response.scores || []);
       })
     );
   }
@@ -108,9 +127,13 @@ export class ObservabilityService {
    * Get observability metrics
    */
   getMetrics(filters?: TraceFilters): Observable<ObservabilityMetrics> {
-    return this.api.get<ObservabilityMetrics>('/observability/metrics', filters).pipe(
+    const params: any = {};
+    if (filters?.fromTimestamp) params.fromTimestamp = filters.fromTimestamp.toISOString();
+    if (filters?.toTimestamp) params.toTimestamp = filters.toTimestamp.toISOString();
+
+    return this.api.get<ObservabilityMetrics>('/langfuse/analytics', params).pipe(
       catchError(() => {
-        // Mock metrics
+        // Fallback to mock data
         return of({
           totalTraces: 1250,
           successRate: 0.98,
@@ -125,17 +148,68 @@ export class ObservabilityService {
   }
 
   /**
+   * Export traces to CSV/JSON
+   */
+  exportTraces(filters?: TraceFilters, format: 'csv' | 'json' = 'json'): Observable<Blob> {
+    return this.getTraces(filters).pipe(
+      switchMap((result) => {
+        const traces = result.traces;
+        let blob: Blob;
+        let mimeType: string;
+
+        if (format === 'csv') {
+          // Convert to CSV
+          const headers = ['ID', 'Name', 'Timestamp', 'Status', 'Tags', 'User ID', 'Session ID'];
+          const rows = traces.map(trace => [
+            trace.id || '',
+            trace.name || '',
+            trace.timestamp ? new Date(trace.timestamp).toISOString() : '',
+            trace.output && typeof trace.output === 'object' && 'error' in trace.output ? 'error' : 'success',
+            (trace.tags || []).join(';'),
+            trace.userId || '',
+            trace.sessionId || ''
+          ]);
+
+          const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+          ].join('\n');
+
+          blob = new Blob([csvContent], { type: 'text/csv' });
+          mimeType = 'text/csv';
+        } else {
+          // Convert to JSON
+          const jsonContent = JSON.stringify(traces, null, 2);
+          blob = new Blob([jsonContent], { type: 'application/json' });
+          mimeType = 'application/json';
+        }
+
+        return of(blob);
+      }),
+      catchError(() => {
+        // Return empty blob on error
+        return of(new Blob([], { type: 'application/json' }));
+      })
+    );
+  }
+
+  /**
    * Search traces
    */
   searchTraces(query: string): Observable<LangFuseTrace[]> {
-    return this.api.get<LangFuseTrace[]>('/observability/traces/search', { q: query }).pipe(
+    return this.api.post<{ traces: LangFuseTrace[] }>('/langfuse/traces/search', { query }).pipe(
       catchError(() => {
         const traces = this.getMockTraces();
         const lowerQuery = query.toLowerCase();
-        return of(traces.filter(t => 
-          t.name.toLowerCase().includes(lowerQuery) ||
-          JSON.stringify(t.input || {}).toLowerCase().includes(lowerQuery)
-        ));
+        return of({
+          traces: traces.filter(t => 
+            t.name.toLowerCase().includes(lowerQuery) ||
+            JSON.stringify(t.input || {}).toLowerCase().includes(lowerQuery)
+          )
+        });
+      }),
+      switchMap((response) => {
+        return of(response.traces || []);
       })
     );
   }

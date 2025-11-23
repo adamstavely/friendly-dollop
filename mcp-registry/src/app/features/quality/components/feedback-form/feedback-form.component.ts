@@ -100,6 +100,12 @@ export type FeedbackType = 'success' | 'failure' | 'latency' | 'quality';
             </div>
 
             <mat-form-field>
+              <mat-label>Trace ID (Optional)</mat-label>
+              <input matInput formControlName="traceId" placeholder="Link to LangFuse trace (execution ID)">
+              <mat-hint>If this feedback is related to a specific execution, enter the execution/trace ID</mat-hint>
+            </mat-form-field>
+
+            <mat-form-field>
               <mat-label>Comments</mat-label>
               <textarea matInput formControlName="comments" rows="4" placeholder="Describe your experience with this tool..."></textarea>
             </mat-form-field>
@@ -160,6 +166,7 @@ export class FeedbackFormComponent implements OnInit {
       toolId: ['', Validators.required],
       feedbackType: ['', Validators.required],
       rating: [5],
+      traceId: [''],
       comments: ['']
     });
   }
@@ -190,15 +197,43 @@ export class FeedbackFormComponent implements OnInit {
   submitFeedback(): void {
     if (this.feedbackForm.valid) {
       const feedback = this.feedbackForm.value;
-      this.qualityService.submitFeedback(feedback.toolId, {
+      const feedbackData = {
         type: feedback.feedbackType,
         rating: feedback.rating,
         comments: feedback.comments,
         timestamp: new Date().toISOString()
-      }).subscribe({
+      };
+
+      // Submit to backend
+      this.qualityService.submitFeedback(feedback.toolId, feedbackData).subscribe({
         next: () => {
-          this.toastService.success('Feedback submitted successfully. Thank you!');
-          this.resetForm();
+          // If trace ID is provided, also create score in LangFuse
+          if (feedback.traceId) {
+            const scoreValue = feedback.rating || (feedback.feedbackType === 'success' ? 10 : feedback.feedbackType === 'failure' ? 1 : 5);
+            this.qualityService.submitFeedbackWithTrace(
+              feedback.traceId,
+              feedback.feedbackType,
+              scoreValue,
+              feedback.comments
+            ).subscribe({
+              next: (scoreId) => {
+                if (scoreId) {
+                  this.toastService.success('Feedback submitted and linked to trace in LangFuse');
+                } else {
+                  this.toastService.success('Feedback submitted successfully. Thank you!');
+                }
+                this.resetForm();
+              },
+              error: () => {
+                // Still show success even if LangFuse fails
+                this.toastService.success('Feedback submitted successfully. Thank you!');
+                this.resetForm();
+              }
+            });
+          } else {
+            this.toastService.success('Feedback submitted successfully. Thank you!');
+            this.resetForm();
+          }
         },
         error: (err) => {
           this.toastService.error(err.message || 'Failed to submit feedback');

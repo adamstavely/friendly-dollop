@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api import workflows, executions, agents, chains
+from app.api import workflows, executions, agents, chains, langfuse
 
 app = FastAPI(
     title=settings.api_title,
@@ -24,6 +24,7 @@ app.include_router(workflows.router, prefix=settings.api_prefix, tags=["workflow
 app.include_router(executions.router, prefix=settings.api_prefix, tags=["executions"])
 app.include_router(agents.router, prefix=settings.api_prefix, tags=["agents"])
 app.include_router(chains.router, prefix=settings.api_prefix, tags=["chains"])
+app.include_router(langfuse.router, prefix=settings.api_prefix, tags=["langfuse"])
 
 
 @app.get("/")

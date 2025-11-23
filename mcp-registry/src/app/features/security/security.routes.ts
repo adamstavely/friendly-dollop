@@ -10,7 +10,7 @@ export const securityRoutes: Routes = [
     loadComponent: () => import('./components/security-scan-list/security-scan-list.component').then(m => m.SecurityScanListComponent)
   },
   {
-    path: 'scans/:id',
+    path: 'scan/:id',
     loadComponent: () => import('./components/security-scan/security-scan.component').then(m => m.SecurityScanComponent)
   },
   {

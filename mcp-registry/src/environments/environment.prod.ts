@@ -8,10 +8,11 @@ export const environment = {
   // LangFuse Configuration
   langfuse: {
     enabled: true,
-    publicKey: process.env['NG_APP_LANGFUSE_PUBLIC_KEY'] || '',
-    secretKey: process.env['NG_APP_LANGFUSE_SECRET_KEY'] || '',
-    host: process.env['NG_APP_LANGFUSE_HOST'] || 'https://cloud.langfuse.com',
-    projectId: process.env['NG_APP_LANGFUSE_PROJECT_ID'] || '',
+    // Configure these values for production deployment
+    publicKey: '', // Set your LangFuse public key here
+    secretKey: '', // Set your LangFuse secret key here
+    host: 'https://cloud.langfuse.com',
+    projectId: '', // Set your LangFuse project ID here
     trackWorkflows: true,
     trackToolCalls: true,
     trackQualityScores: true,

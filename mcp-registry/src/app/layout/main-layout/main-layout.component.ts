@@ -122,6 +122,30 @@ import { ThemeService } from '../../core/services/theme.service';
             </mat-nav-list>
           </mat-expansion-panel>
 
+          <!-- Observability Group -->
+          <mat-expansion-panel [expanded]="isGroupExpanded('observability')" (opened)="expandGroup('observability')" (closed)="collapseGroup('observability')" class="nav-group">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>visibility</mat-icon>
+                <span>Observability</span>
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+            <mat-nav-list>
+              <a mat-list-item routerLink="/prompts" routerLinkActive="active">
+                <mat-icon>description</mat-icon>
+                <span>Prompts</span>
+              </a>
+              <a mat-list-item routerLink="/observability" routerLinkActive="active">
+                <mat-icon>analytics</mat-icon>
+                <span>Traces</span>
+              </a>
+              <a mat-list-item routerLink="/security" routerLinkActive="active">
+                <mat-icon>security</mat-icon>
+                <span>Security</span>
+              </a>
+            </mat-nav-list>
+          </mat-expansion-panel>
+
           <!-- Administration Group -->
           <mat-expansion-panel [expanded]="isGroupExpanded('administration')" (opened)="expandGroup('administration')" (closed)="collapseGroup('administration')" class="nav-group">
             <mat-expansion-panel-header>

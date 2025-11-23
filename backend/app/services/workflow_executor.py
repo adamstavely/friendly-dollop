@@ -79,7 +79,13 @@ class WorkflowExecutor:
     ) -> Dict[str, Any]:
         """Execute Langgraph workflow."""
         graph = await self.langgraph_service.create_graph(definition)
-        result = await self.langgraph_service.execute_graph(graph, input_data or {})
+        result = await self.langgraph_service.execute_graph(
+            graph,
+            input_data or {},
+            state_schema=definition.stateSchema,
+            enable_checkpointing=True,
+            execution_id=execution.id if hasattr(self, '_current_execution') else None
+        )
         return result
     
     async def _execute_agent(

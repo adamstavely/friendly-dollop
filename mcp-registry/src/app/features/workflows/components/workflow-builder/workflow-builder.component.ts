@@ -12,6 +12,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { WorkflowService } from '../../services/workflow.service';
 import { ToolService } from '../../../tools/services/tool.service';
+import { PromptService } from '../../../prompts/services/prompt.service';
 import { 
   Workflow, 
   WorkflowDefinition, 
@@ -19,10 +20,14 @@ import {
   WorkflowConnection 
 } from '../../../../shared/models/workflow.model';
 import { Tool } from '../../../../shared/models/tool.model';
+import { Prompt } from '../../../../shared/models/prompt.model';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
 import { ToastService } from '../../../../core/services/toast.service';
 import { WorkflowCanvasComponent } from './workflow-canvas.component';
+import { LanggraphConfigComponent } from '../langgraph-config/langgraph-config.component';
+import { AgentConfigComponent } from '../agent-config/agent-config.component';
+import { ChainConfigComponent } from '../chain-config/chain-config.component';
 
 @Component({
   selector: 'app-workflow-builder',
@@ -41,7 +46,10 @@ import { WorkflowCanvasComponent } from './workflow-canvas.component';
     MatChipsModule,
     LoadingSpinnerComponent,
     ErrorDisplayComponent,
-    WorkflowCanvasComponent
+    WorkflowCanvasComponent,
+    LanggraphConfigComponent,
+    AgentConfigComponent,
+    ChainConfigComponent
   ],
   template: `
     <div class="workflow-builder-container">
@@ -132,6 +140,10 @@ import { WorkflowCanvasComponent } from './workflow-canvas.component';
                       <mat-icon>psychology</mat-icon>
                       Add LLM
                     </button>
+                    <button mat-raised-button (click)="addNode('prompt')">
+                      <mat-icon>description</mat-icon>
+                      Add Prompt
+                    </button>
                     <button mat-raised-button (click)="addNode('output')">
                       <mat-icon>output</mat-icon>
                       Add Output
@@ -160,6 +172,21 @@ import { WorkflowCanvasComponent } from './workflow-canvas.component';
                             </mat-option>
                           </mat-select>
                         </mat-form-field>
+                      </div>
+                      <div *ngIf="selectedNode.type === 'prompt' || selectedNode.type === 'llm'">
+                        <mat-form-field class="full-width">
+                          <mat-label>Prompt</mat-label>
+                          <mat-select [(ngModel)]="selectedNode.promptId" (selectionChange)="onPromptSelected(selectedNode, $event.value)">
+                            <mat-option value="">None</mat-option>
+                            <mat-option *ngFor="let prompt of availablePrompts" [value]="prompt.id">
+                              {{ prompt.name }}
+                            </mat-option>
+                          </mat-select>
+                        </mat-form-field>
+                        <button mat-button *ngIf="selectedNode.promptId" [routerLink]="['/prompts', selectedNode.promptId, 'playground']" target="_blank">
+                          <mat-icon>open_in_new</mat-icon>
+                          Test Prompt
+                        </button>
                       </div>
                       <div>
                         <mat-form-field class="full-width">
@@ -200,6 +227,40 @@ import { WorkflowCanvasComponent } from './workflow-canvas.component';
                       </mat-card-content>
                     </mat-card>
                   </div>
+                </div>
+              </mat-tab>
+
+              <mat-tab *ngIf="workflow.engine === 'langgraph'" label="LangGraph Config">
+                <div class="tab-content">
+                  <app-langgraph-config
+                    [definition]="definition"
+                    [selectedNodeId]="selectedNode?.id"
+                    (definitionChange)="onDefinitionChange($event)"
+                    (validationRequest)="validateWorkflow()">
+                  </app-langgraph-config>
+                </div>
+              </mat-tab>
+
+              <mat-tab *ngIf="workflow.engine === 'langchain' && workflow.workflowType === 'agent'" label="Agent Config">
+                <div class="tab-content">
+                  <app-agent-config
+                    [config]="workflow.agentConfig!"
+                    [availableTools]="availableTools"
+                    (configChange)="onAgentConfigChange($event)"
+                    (validationRequest)="validateWorkflow()">
+                  </app-agent-config>
+                </div>
+              </mat-tab>
+
+              <mat-tab *ngIf="workflow.engine === 'langchain' && workflow.workflowType === 'chain'" label="Chain Config">
+                <div class="tab-content">
+                  <app-chain-config
+                    [config]="workflow.chainConfig!"
+                    [nodes]="definition.nodes"
+                    [selectedNodeId]="selectedNode?.id"
+                    (configChange)="onChainConfigChange($event)"
+                    (validationRequest)="validateWorkflow()">
+                  </app-chain-config>
                 </div>
               </mat-tab>
             </mat-tab-group>
@@ -366,6 +427,7 @@ export class WorkflowBuilderComponent implements OnInit {
     viewport: { x: 0, y: 0, zoom: 1 }
   };
   availableTools: Tool[] = [];
+  availablePrompts: Prompt[] = [];
   selectedNode: WorkflowNode | null = null;
   loading: boolean = false;
   error: string | null = null;
@@ -377,6 +439,7 @@ export class WorkflowBuilderComponent implements OnInit {
     private router: Router,
     private workflowService: WorkflowService,
     private toolService: ToolService,
+    private promptService: PromptService,
     private toastService: ToastService
   ) {}
 
@@ -403,6 +466,7 @@ export class WorkflowBuilderComponent implements OnInit {
     }
 
     this.loadAvailableTools();
+    this.loadAvailablePrompts();
   }
 
   loadWorkflow(id: string): void {
@@ -442,6 +506,27 @@ export class WorkflowBuilderComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error loading tools:', err);
+      }
+    });
+  }
+
+  loadAvailablePrompts(): void {
+    this.promptService.getPrompts().subscribe({
+      next: (prompts) => {
+        // Convert LangFuse prompts to Prompt format if needed
+        this.availablePrompts = prompts.map((p: any) => ({
+          id: p.id || p.name,
+          name: p.name || p.id,
+          content: p.prompt || '',
+          version: p.version || '1.0.0',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isActive: true
+        }));
+      },
+      error: (err) => {
+        console.error('Error loading prompts:', err);
+        this.availablePrompts = [];
       }
     });
   }
@@ -488,6 +573,7 @@ export class WorkflowBuilderComponent implements OnInit {
       'output': 'output',
       'mcp-tool': 'build',
       'llm': 'psychology',
+      'prompt': 'description',
       'condition': 'code',
       'transform': 'transform'
     };
@@ -500,6 +586,7 @@ export class WorkflowBuilderComponent implements OnInit {
       'output': 'Output',
       'mcp-tool': 'MCP Tool',
       'llm': 'LLM',
+      'prompt': 'Prompt',
       'condition': 'Condition',
       'transform': 'Transform'
     };
@@ -519,6 +606,16 @@ export class WorkflowBuilderComponent implements OnInit {
     }
     if (!this.workflow.mcpTools.includes(toolId)) {
       this.workflow.mcpTools.push(toolId);
+    }
+  }
+
+  onPromptSelected(node: WorkflowNode, promptId: string): void {
+    node.promptId = promptId;
+    if (promptId) {
+      const prompt = this.availablePrompts.find(p => p.id === promptId);
+      if (prompt) {
+        node.label = `Prompt: ${prompt.name}`;
+      }
     }
   }
 
@@ -628,6 +725,64 @@ export class WorkflowBuilderComponent implements OnInit {
   onWorkflowTypeChanged(): void {
     // Update available node types based on workflow type
     // This could show/hide certain node types in the toolbar
+    
+    // Initialize config objects if needed
+    if (this.workflow.engine === 'langchain' && this.workflow.workflowType === 'agent' && !this.workflow.agentConfig) {
+      this.workflow.agentConfig = {
+        agentType: 'react',
+        llmProvider: 'openai',
+        llmModel: 'gpt-4',
+        temperature: 0.7,
+        tools: []
+      };
+    } else if (this.workflow.engine === 'langchain' && this.workflow.workflowType === 'chain' && !this.workflow.chainConfig) {
+      this.workflow.chainConfig = {
+        chainType: 'sequential',
+        nodes: [],
+        transforms: {}
+      };
+    }
+  }
+
+  onDefinitionChange(definition: WorkflowDefinition): void {
+    this.definition = definition;
+  }
+
+  onAgentConfigChange(config: any): void {
+    if (!this.workflow.agentConfig) {
+      this.workflow.agentConfig = config;
+    } else {
+      Object.assign(this.workflow.agentConfig, config);
+    }
+  }
+
+  onChainConfigChange(config: any): void {
+    if (!this.workflow.chainConfig) {
+      this.workflow.chainConfig = config;
+    } else {
+      Object.assign(this.workflow.chainConfig, config);
+    }
+  }
+
+  validateWorkflow(): void {
+    if (!this.workflowId) {
+      this.toastService.warning('Please save the workflow first before validating');
+      return;
+    }
+
+    this.workflowService.validateWorkflow(this.workflowId).subscribe({
+      next: (result) => {
+        if (result.valid) {
+          this.toastService.success('Workflow validation passed');
+        } else {
+          const errors = result.errors.join(', ');
+          this.toastService.error(`Validation failed: ${errors}`);
+        }
+      },
+      error: (err) => {
+        this.toastService.error(err.message || 'Failed to validate workflow');
+      }
+    });
   }
 }
 

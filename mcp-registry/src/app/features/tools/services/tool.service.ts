@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, catchError } from 'rxjs';
+import { Observable, of, catchError, tap } from 'rxjs';
 import { ApiService } from '../../../core/services/api.service';
 import { MockDataService } from '../../../core/services/mock-data.service';
+import { LangFuseService } from '../../../core/services/langfuse.service';
 import { Tool, ToolVersion } from '../../../shared/models/tool.model';
+import { environment } from '../../../../environments/environment';
 
 export interface ToolSearchParams {
   q?: string;
@@ -24,7 +26,8 @@ export interface ToolSearchParams {
 export class ToolService {
   constructor(
     private api: ApiService,
-    private mockData: MockDataService
+    private mockData: MockDataService,
+    private langfuse: LangFuseService
   ) {}
 
   getTools(params?: ToolSearchParams): Observable<{ tools: Tool[]; total: number }> {
@@ -147,6 +150,34 @@ export class ToolService {
     );
   }
 
+  /**
+   * Execute a tool and track with LangFuse
+   */
+  executeTool(toolId: string, input: any, traceId?: string): Observable<any> {
+    // Track tool invocation in LangFuse if enabled
+    if (environment.langfuse?.enabled && environment.langfuse?.trackToolCalls && traceId) {
+      this.langfuse.createToolSpan(
+        traceId,
+        `Tool: ${toolId}`,
+        toolId,
+        input
+      );
+    }
+
+    return this.api.post<any>(`/tools/${toolId}/execute`, input).pipe(
+      catchError(() => {
+        // Mock execution
+        return of({ output: `Mock execution result for ${toolId}`, input });
+      }),
+      tap((result) => {
+        // Update tool span with output
+        if (environment.langfuse?.enabled && environment.langfuse?.trackToolCalls && traceId) {
+          // The span output would be updated when the trace is ended
+        }
+      })
+    );
+  }
+
   searchTools(query: string): Observable<Tool[]> {
     return this.api.get<Tool[]>('/search', { q: query });
   }
@@ -185,6 +216,58 @@ export class ToolService {
 
   retireTool(id: string, retirementPlan: any): Observable<void> {
     return this.api.post(`/tools/${id}/retire`, retirementPlan);
+  }
+
+  /**
+   * Track tool invocation in LangFuse
+   * This should be called when a tool is invoked during workflow execution
+   */
+  trackToolInvocation(
+    executionId: string,
+    toolId: string,
+    toolName: string,
+    input: any,
+    output?: any,
+    metadata?: {
+      version?: string;
+      agentPersona?: string;
+      latency?: number;
+      error?: string;
+    }
+  ): string | null {
+    if (!environment.langfuse?.enabled || !environment.langfuse?.trackToolCalls) {
+      return null;
+    }
+
+    try {
+      return this.langfuse.createToolSpan(
+        executionId,
+        toolName,
+        toolId,
+        input,
+        output,
+        {
+          version: metadata?.version,
+          agentPersona: metadata?.agentPersona
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track tool invocation:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get LangFuse traces for a specific tool
+   */
+  getToolTraces(toolId: string, limit?: number): Observable<any[]> {
+    if (!this.langfuse.isEnabled()) {
+      return of([]);
+    }
+
+    // This would query LangFuse for traces that include this tool
+    // For now, return empty array - would need backend API
+    return of([]);
   }
 }
 

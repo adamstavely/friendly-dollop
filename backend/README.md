@@ -145,8 +145,310 @@ docker run -p 8000:8000 --env-file .env mcp-registry-backend
 ## Testing
 
 ```bash
-# Run tests (when implemented)
+# Run all tests
 pytest
+
+# Run with coverage
+pytest --cov=app --cov-report=html
+
+# Run specific test file
+pytest tests/test_langgraph_service.py
+
+# Run integration tests
+pytest tests/integration/
+```
+
+## API Examples
+
+### Create a LangGraph Workflow
+
+```bash
+curl -X POST http://localhost:8000/api/workflows \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My LangGraph Workflow",
+    "description": "A test workflow",
+    "engine": "langgraph",
+    "workflowType": "graph"
+  }'
+```
+
+### Update Workflow Definition
+
+```bash
+curl -X PUT http://localhost:8000/api/workflows/{workflow_id}/definition \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nodes": [
+      {
+        "id": "input-1",
+        "type": "input",
+        "label": "Input Node",
+        "data": {}
+      },
+      {
+        "id": "llm-1",
+        "type": "llm",
+        "label": "LLM Node",
+        "data": {
+          "llm": {
+            "provider": "openai",
+            "model": "gpt-4",
+            "temperature": 0.7
+          }
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-1",
+        "source": "input-1",
+        "target": "llm-1"
+      }
+    ],
+    "stateSchema": {
+      "type": "object",
+      "properties": {
+        "input": {"type": "string"},
+        "output": {"type": "string"}
+      }
+    }
+  }'
+```
+
+### Execute a Workflow
+
+```bash
+curl -X POST http://localhost:8000/api/workflows/{workflow_id}/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": "Hello, world!"
+  }'
+```
+
+### Stream Execution Updates
+
+```bash
+curl http://localhost:8000/api/workflows/{workflow_id}/executions/{execution_id}/stream
+```
+
+### Create an Agent Workflow
+
+```bash
+curl -X POST http://localhost:8000/api/workflows \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Agent Workflow",
+    "engine": "langchain",
+    "workflowType": "agent",
+    "agentConfig": {
+      "agentType": "react",
+      "llmProvider": "openai",
+      "llmModel": "gpt-4",
+      "temperature": 0.7,
+      "systemMessage": "You are a helpful assistant.",
+      "tools": ["tool-1", "tool-2"]
+    }
+  }'
+```
+
+### Validate Workflow
+
+```bash
+curl -X POST http://localhost:8000/api/workflows/{workflow_id}/validate
+```
+
+## Workflow Definition Formats
+
+### LangGraph Workflow Definition
+
+```json
+{
+  "nodes": [
+    {
+      "id": "input-1",
+      "type": "input",
+      "label": "Input",
+      "data": {}
+    },
+    {
+      "id": "llm-1",
+      "type": "llm",
+      "label": "LLM Node",
+      "data": {
+        "llm": {
+          "provider": "openai",
+          "model": "gpt-4",
+          "temperature": 0.7,
+          "system_message": "You are a helpful assistant."
+        }
+      }
+    },
+    {
+      "id": "transform-1",
+      "type": "transform",
+      "label": "Transform",
+      "data": {
+        "transform": {
+          "type": "to_string",
+          "config": {}
+        }
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-1",
+      "source": "input-1",
+      "target": "llm-1"
+    },
+    {
+      "id": "conn-2",
+      "source": "llm-1",
+      "target": "transform-1"
+    }
+  ],
+  "stateSchema": {
+    "type": "object",
+    "properties": {
+      "input": {"type": "string"},
+      "output": {"type": "string"},
+      "messages": {
+        "type": "array",
+        "items": {"type": "object"}
+      }
+    },
+    "required": ["input"]
+  }
+}
+```
+
+### LangChain Agent Configuration
+
+```json
+{
+  "agentType": "react",
+  "llmProvider": "openai",
+  "llmModel": "gpt-4",
+  "temperature": 0.7,
+  "maxTokens": 1000,
+  "systemMessage": "You are a helpful assistant.",
+  "persona": "developer",
+  "tools": ["tool-1", "tool-2"]
+}
+```
+
+### LangChain Chain Configuration
+
+```json
+{
+  "chainType": "sequential",
+  "nodes": ["node-1", "node-2", "node-3"],
+  "transforms": {
+    "node-1": {
+      "type": "to_string",
+      "config": {}
+    },
+    "node-2": {
+      "type": "uppercase",
+      "config": {}
+    }
+  }
+}
+```
+
+## Transform Functions
+
+The following transform functions are supported:
+
+- `passthrough` / `identity` - Pass input through unchanged
+- `to_string` - Convert input to string
+- `to_json` - Parse JSON string or stringify object
+- `extract_field` - Extract a field from an object
+- `set_field` - Set a field in an object
+- `merge` - Merge objects
+- `filter` - Filter array items
+- `map` - Map array items
+- `uppercase` - Convert string to uppercase
+- `lowercase` - Convert string to lowercase
+- `trim` - Trim whitespace
+- `replace` - Replace text in string
+- `split` - Split string into array
+- `join` - Join array into string
+- `length` - Get length of string/array/object
+- `slice` - Slice string or array
+
+## Migration Guide
+
+### Migrating from Flowise to LangGraph
+
+1. Export your Flowise workflow definition
+2. Create a new LangGraph workflow:
+```bash
+curl -X POST http://localhost:8000/api/workflows \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Migrated Workflow",
+    "engine": "langgraph"
+  }'
+```
+
+3. Use the migration endpoint:
+```bash
+curl -X POST http://localhost:8000/api/workflows/{workflow_id}/migrate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target_engine": "langgraph"
+  }'
+```
+
+### Migrating from LangChain Chain to LangGraph
+
+1. Ensure your chain nodes are compatible with graph structure
+2. Use the migration endpoint to convert:
+```bash
+curl -X POST http://localhost:8000/api/workflows/{workflow_id}/migrate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "target_engine": "langgraph"
+  }'
+```
+
+## Error Handling
+
+The API uses custom exceptions for better error handling:
+
+- `WorkflowExecutionError` - Base exception for workflow errors
+- `LLMExecutionError` - LLM-related errors
+- `ToolExecutionError` - Tool execution errors
+- `StateValidationError` - State validation errors
+- `GraphCompilationError` - Graph compilation errors
+- `TransformExecutionError` - Transform execution errors
+
+All errors include:
+- Error message
+- Error code
+- Context information
+
+## State Management
+
+LangGraph workflows support state schema validation and checkpointing:
+
+- **State Schema**: Define the structure of workflow state using JSON Schema
+- **Checkpointing**: Save state snapshots at key points during execution
+- **Validation**: Validate state against schema before and during execution
+
+Example state schema:
+```json
+{
+  "type": "object",
+  "properties": {
+    "input": {"type": "string"},
+    "output": {"type": "string"},
+    "intermediate": {"type": "object"}
+  },
+  "required": ["input"]
+}
 ```
 
 ## Notes
@@ -154,4 +456,6 @@ pytest
 - The backend uses in-memory storage for workflows (replace with database in production)
 - MCP tool definitions are cached for 5 minutes
 - Execution history is stored in memory (implement persistence for production)
+- LLM API keys should be set via environment variables for security
+- State checkpoints are limited to 100 per execution to prevent memory issues
 

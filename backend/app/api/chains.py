@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List, Dict, Any
 from app.models.workflow import ChainConfig
 from app.services.chain_service import ChainService
+from app.utils.workflow_validator import WorkflowValidator
 
 router = APIRouter()
 _chain_service = ChainService()
@@ -28,16 +29,10 @@ async def get_chain_types():
 @router.post("/chains/validate", response_model=Dict[str, Any])
 async def validate_chain_config(chain_config: ChainConfig):
     """Validate chain configuration."""
-    errors = []
-    
-    if not chain_config.chainType:
-        errors.append("chainType is required")
-    
-    if not chain_config.nodes:
-        errors.append("nodes are required")
+    is_valid, errors = WorkflowValidator.validate_chain_config(chain_config.dict())
     
     return {
-        "valid": len(errors) == 0,
+        "valid": is_valid,
         "errors": errors
     }
 
