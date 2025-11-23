@@ -202,4 +202,35 @@ export class PromptService {
       })
     );
   }
+
+  /**
+   * Run batch evaluation on test dataset
+   */
+  batchEvaluate(promptId: string, testCases: any[]): Observable<any> {
+    return this.api.post<any>(
+      `/langfuse/prompts/${promptId}/batch-evaluate`,
+      { testCases }
+    );
+  }
+
+  /**
+   * Get prompt performance analytics
+   */
+  getPromptAnalytics(promptId: string, fromTimestamp?: string, toTimestamp?: string): Observable<any> {
+    const params: any = {};
+    if (fromTimestamp) params.fromTimestamp = fromTimestamp;
+    if (toTimestamp) params.toTimestamp = toTimestamp;
+    
+    return this.api.get<any>(`/langfuse/prompts/${promptId}/analytics`, params);
+  }
+
+  /**
+   * Rollback prompt to a previous version
+   */
+  rollbackPromptVersion(promptId: string, targetVersion: number): Observable<LangFusePrompt> {
+    return this.api.post<LangFusePrompt>(
+      `/langfuse/prompts/${promptId}/rollback`,
+      { targetVersion }
+    );
+  }
 }

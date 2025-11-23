@@ -161,6 +161,10 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
               </mat-tab-group>
 
               <div class="actions-section">
+                <button mat-raised-button (click)="runMultipleComparisons()" [disabled]="comparing">
+                  <mat-icon>repeat</mat-icon>
+                  Run {{ runCount }} More Times
+                </button>
                 <button mat-raised-button (click)="saveComparison()">
                   <mat-icon>save</mat-icon>
                   Save Comparison
@@ -169,6 +173,94 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
                   <mat-icon>download</mat-icon>
                   Export Results
                 </button>
+              </div>
+
+              <div *ngIf="statisticalAnalysis" class="statistics-section">
+                <h3>Statistical Analysis</h3>
+                
+                <div class="stats-grid">
+                  <div *ngFor="let stat of statisticalAnalysis.versions" class="stat-card">
+                    <h4>Version {{ stat.version }}</h4>
+                    <div class="stat-item">
+                      <span class="stat-label">Mean Latency:</span>
+                      <span class="stat-value">{{ stat.meanLatency.toFixed(2) }}ms</span>
+                      <span class="stat-stddev">±{{ stat.stdDevLatency.toFixed(2) }}ms</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">95% CI Latency:</span>
+                      <span class="stat-value">[{{ stat.confidenceInterval95.latency[0].toFixed(2) }}, {{ stat.confidenceInterval95.latency[1].toFixed(2) }}]ms</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Mean Cost:</span>
+                      <span class="stat-value">${{ stat.meanCost.toFixed(4) }}</span>
+                      <span class="stat-stddev">±${{ stat.stdDevCost.toFixed(4) }}</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Mean Tokens:</span>
+                      <span class="stat-value">{{ stat.meanTokens.toFixed(0) }}</span>
+                      <span class="stat-stddev">±{{ stat.stdDevTokens.toFixed(0) }}</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Sample Size:</span>
+                      <span class="stat-value">{{ stat.sampleSize }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="t-test-results">
+                  <h4>T-Test Results (Version {{ selectedVersions[0] }} vs {{ selectedVersions[1] }})</h4>
+                  <table class="t-test-table">
+                    <thead>
+                      <tr>
+                        <th>Metric</th>
+                        <th>T-Statistic</th>
+                        <th>P-Value</th>
+                        <th>Significant (p < 0.05)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Latency</td>
+                        <td>{{ statisticalAnalysis.tTest.latency.tStatistic.toFixed(4) }}</td>
+                        <td>{{ statisticalAnalysis.tTest.latency.pValue.toFixed(4) }}</td>
+                        <td>
+                          <mat-chip [class]="statisticalAnalysis.tTest.latency.significant ? 'significant' : 'not-significant'">
+                            {{ statisticalAnalysis.tTest.latency.significant ? 'Yes' : 'No' }}
+                          </mat-chip>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Cost</td>
+                        <td>{{ statisticalAnalysis.tTest.cost.tStatistic.toFixed(4) }}</td>
+                        <td>{{ statisticalAnalysis.tTest.cost.pValue.toFixed(4) }}</td>
+                        <td>
+                          <mat-chip [class]="statisticalAnalysis.tTest.cost.significant ? 'significant' : 'not-significant'">
+                            {{ statisticalAnalysis.tTest.cost.significant ? 'Yes' : 'No' }}
+                          </mat-chip>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td>Tokens</td>
+                        <td>{{ statisticalAnalysis.tTest.tokens.tStatistic.toFixed(4) }}</td>
+                        <td>{{ statisticalAnalysis.tTest.tokens.pValue.toFixed(4) }}</td>
+                        <td>
+                          <mat-chip [class]="statisticalAnalysis.tTest.tokens.significant ? 'significant' : 'not-significant'">
+                            {{ statisticalAnalysis.tTest.tokens.significant ? 'Yes' : 'No' }}
+                          </mat-chip>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div *ngIf="statisticalAnalysis.winner" class="winner-section">
+                  <h4>Winner</h4>
+                  <div class="winner-card">
+                    <strong>Version {{ statisticalAnalysis.winner.version }}</strong> wins on 
+                    <strong>{{ statisticalAnalysis.winner.metric }}</strong> with 
+                    <strong>{{ (statisticalAnalysis.winner.improvement * 100).toFixed(1) }}%</strong> improvement
+                  </div>
+                </div>
               </div>
             </div>
           </mat-card-content>
@@ -272,8 +364,115 @@ import { LoadingSpinnerComponent } from '../../../../shared/components/loading-s
       gap: 16px;
       margin-top: 24px;
     }
+    .statistics-section {
+      margin-top: 32px;
+      padding: 24px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: white;
+      padding: 16px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .stat-card h4 {
+      margin: 0 0 12px 0;
+      color: #6366f1;
+    }
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #666;
+    }
+    .stat-value {
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+    .stat-stddev {
+      font-size: 12px;
+      color: #999;
+    }
+    .t-test-results {
+      margin-top: 24px;
+    }
+    .t-test-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .t-test-table th,
+    .t-test-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .t-test-table th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    .significant {
+      background: #10b981;
+      color: white;
+    }
+    .not-significant {
+      background: #ef4444;
+      color: white;
+    }
+    .winner-section {
+      margin-top: 24px;
+    }
+    .winner-card {
+      background: #dbeafe;
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 4px solid #3b82f6;
+    }
   `]
 })
+export interface StatisticalAnalysis {
+  version: string;
+  meanLatency: number;
+  stdDevLatency: number;
+  meanCost: number;
+  stdDevCost: number;
+  meanTokens: number;
+  stdDevTokens: number;
+  confidenceInterval95: {
+    latency: [number, number];
+    cost: [number, number];
+    tokens: [number, number];
+  };
+  sampleSize: number;
+}
+
+export interface ComparisonStatistics {
+  versions: StatisticalAnalysis[];
+  tTest: {
+    latency: { tStatistic: number; pValue: number; significant: boolean };
+    cost: { tStatistic: number; pValue: number; significant: boolean };
+    tokens: { tStatistic: number; pValue: number; significant: boolean };
+  };
+  winner: {
+    version: string;
+    metric: 'latency' | 'cost' | 'tokens';
+    improvement: number;
+  } | null;
+}
+
 export class PromptComparisonComponent implements OnInit {
   prompt: LangFusePrompt | null = null;
   loading = false;
@@ -284,6 +483,9 @@ export class PromptComparisonComponent implements OnInit {
   testInputs: Record<string, string> = {};
   comparisonResults: PromptComparisonResult[] = [];
   displayedColumns: string[] = ['version', 'latency', 'tokens', 'cost', 'output'];
+  statisticalAnalysis: ComparisonStatistics | null = null;
+  multipleRuns: Map<string, PromptComparisonResult[]> = new Map();
+  runCount = 1;
 
   constructor(
     private route: ActivatedRoute,
@@ -367,6 +569,21 @@ export class PromptComparisonComponent implements OnInit {
     ).subscribe({
       next: (results) => {
         this.comparisonResults = results;
+        
+        // Store results for statistical analysis
+        results.forEach(result => {
+          const versionKey = result.version;
+          if (!this.multipleRuns.has(versionKey)) {
+            this.multipleRuns.set(versionKey, []);
+          }
+          this.multipleRuns.get(versionKey)!.push(result);
+        });
+
+        // Calculate statistics if we have multiple runs
+        if (this.multipleRuns.size > 0) {
+          this.calculateStatistics();
+        }
+        
         this.comparing = false;
       },
       error: (err) => {
@@ -374,6 +591,173 @@ export class PromptComparisonComponent implements OnInit {
         this.comparing = false;
       }
     });
+  }
+
+  runMultipleComparisons(): void {
+    if (!this.prompt || this.selectedVersions.length < 2) return;
+    
+    for (let i = 0; i < this.runCount; i++) {
+      setTimeout(() => {
+        this.runComparison();
+      }, i * 1000);
+    }
+  }
+
+  calculateStatistics(): void {
+    if (this.selectedVersions.length < 2) return;
+
+    const versionStats: StatisticalAnalysis[] = [];
+    
+    // Calculate statistics for each version
+    this.selectedVersions.forEach(version => {
+      const versionKey = version.toString();
+      const runs = this.multipleRuns.get(versionKey) || [];
+      
+      if (runs.length === 0) return;
+
+      const latencies = runs.map(r => r.metrics.latency);
+      const costs = runs.map(r => r.metrics.cost || 0);
+      const tokens = runs.map(r => r.metrics.tokenUsage?.totalTokens || 0);
+
+      const meanLatency = this.mean(latencies);
+      const stdDevLatency = this.standardDeviation(latencies);
+      const meanCost = this.mean(costs);
+      const stdDevCost = this.standardDeviation(costs);
+      const meanTokens = this.mean(tokens);
+      const stdDevTokens = this.standardDeviation(tokens);
+
+      const ci95Latency = this.confidenceInterval95(latencies);
+      const ci95Cost = this.confidenceInterval95(costs);
+      const ci95Tokens = this.confidenceInterval95(tokens);
+
+      versionStats.push({
+        version: versionKey,
+        meanLatency,
+        stdDevLatency,
+        meanCost,
+        stdDevCost,
+        meanTokens,
+        stdDevTokens,
+        confidenceInterval95: {
+          latency: ci95Latency,
+          cost: ci95Cost,
+          tokens: ci95Tokens
+        },
+        sampleSize: runs.length
+      });
+    });
+
+    // Perform t-tests between versions
+    const version1Key = this.selectedVersions[0].toString();
+    const version2Key = this.selectedVersions[1].toString();
+    const runs1 = this.multipleRuns.get(version1Key) || [];
+    const runs2 = this.multipleRuns.get(version2Key) || [];
+
+    if (runs1.length > 0 && runs2.length > 0) {
+      const latencies1 = runs1.map(r => r.metrics.latency);
+      const latencies2 = runs2.map(r => r.metrics.latency);
+      const costs1 = runs1.map(r => r.metrics.cost || 0);
+      const costs2 = runs2.map(r => r.metrics.cost || 0);
+      const tokens1 = runs1.map(r => r.metrics.tokenUsage?.totalTokens || 0);
+      const tokens2 = runs2.map(r => r.metrics.tokenUsage?.totalTokens || 0);
+
+      const tTestLatency = this.tTest(latencies1, latencies2);
+      const tTestCost = this.tTest(costs1, costs2);
+      const tTestTokens = this.tTest(tokens1, tokens2);
+
+      // Determine winner
+      let winner: ComparisonStatistics['winner'] = null;
+      const stat1 = versionStats.find(s => s.version === version1Key);
+      const stat2 = versionStats.find(s => s.version === version2Key);
+
+      if (stat1 && stat2) {
+        // Compare on latency (lower is better)
+        if (stat1.meanLatency < stat2.meanLatency) {
+          const improvement = (stat2.meanLatency - stat1.meanLatency) / stat2.meanLatency;
+          winner = { version: version1Key, metric: 'latency', improvement };
+        } else {
+          const improvement = (stat1.meanLatency - stat2.meanLatency) / stat1.meanLatency;
+          winner = { version: version2Key, metric: 'latency', improvement };
+        }
+      }
+
+      this.statisticalAnalysis = {
+        versions: versionStats,
+        tTest: {
+          latency: { ...tTestLatency, significant: tTestLatency.pValue < 0.05 },
+          cost: { ...tTestCost, significant: tTestCost.pValue < 0.05 },
+          tokens: { ...tTestTokens, significant: tTestTokens.pValue < 0.05 }
+        },
+        winner
+      };
+    }
+  }
+
+  private mean(values: number[]): number {
+    return values.reduce((a, b) => a + b, 0) / values.length;
+  }
+
+  private standardDeviation(values: number[]): number {
+    const avg = this.mean(values);
+    const squareDiffs = values.map(value => Math.pow(value - avg, 2));
+    const avgSquareDiff = this.mean(squareDiffs);
+    return Math.sqrt(avgSquareDiff);
+  }
+
+  private confidenceInterval95(values: number[]): [number, number] {
+    const mean = this.mean(values);
+    const stdDev = this.standardDeviation(values);
+    const n = values.length;
+    const tValue = 1.96; // Approximate t-value for 95% CI with large n
+    const margin = tValue * (stdDev / Math.sqrt(n));
+    return [mean - margin, mean + margin];
+  }
+
+  private tTest(sample1: number[], sample2: number[]): { tStatistic: number; pValue: number } {
+    const mean1 = this.mean(sample1);
+    const mean2 = this.mean(sample2);
+    const stdDev1 = this.standardDeviation(sample1);
+    const stdDev2 = this.standardDeviation(sample2);
+    const n1 = sample1.length;
+    const n2 = sample2.length;
+
+    // Pooled standard deviation
+    const pooledStd = Math.sqrt(
+      ((n1 - 1) * stdDev1 * stdDev1 + (n2 - 1) * stdDev2 * stdDev2) / (n1 + n2 - 2)
+    );
+
+    // Standard error
+    const se = pooledStd * Math.sqrt(1 / n1 + 1 / n2);
+
+    // t-statistic
+    const tStatistic = (mean1 - mean2) / se;
+
+    // Degrees of freedom
+    const df = n1 + n2 - 2;
+
+    // Approximate p-value (simplified - in production, use proper t-distribution)
+    // Using normal approximation for large samples
+    const pValue = 2 * (1 - this.normalCDF(Math.abs(tStatistic)));
+
+    return { tStatistic, pValue };
+  }
+
+  private normalCDF(x: number): number {
+    // Approximation of standard normal CDF
+    const a1 = 0.254829592;
+    const a2 = -0.284496736;
+    const a3 = 1.421413741;
+    const a4 = -1.453152027;
+    const a5 = 1.061405429;
+    const p = 0.3275911;
+
+    const sign = x < 0 ? -1 : 1;
+    x = Math.abs(x) / Math.sqrt(2.0);
+
+    const t = 1.0 / (1.0 + p * x);
+    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+
+    return 0.5 * (1.0 + sign * y);
   }
 
   saveComparison(): void {

@@ -1,6 +1,6 @@
 """LangFuse API endpoints."""
 from fastapi import APIRouter, HTTPException, Query
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from app.services.langfuse_service import get_langfuse_service
 from pydantic import BaseModel
 
@@ -188,4 +188,99 @@ async def get_prompt_versions(prompt_id: str):
     service = get_langfuse_service()
     versions = await service.get_prompt_versions(prompt_id)
     return {"versions": versions}
+
+
+@router.post("/langfuse/prompts/{prompt_id}/execute")
+async def execute_prompt(
+    prompt_id: str,
+    variables: Dict[str, Any],
+    options: Optional[Dict[str, Any]] = None
+):
+    """Execute a prompt with variables."""
+    service = get_langfuse_service()
+    result = await service.execute_prompt(prompt_id, variables, options or {})
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to execute prompt")
+    
+    return result
+
+
+@router.post("/langfuse/prompts/{prompt_id}/compare")
+async def compare_prompt_versions(
+    prompt_id: str,
+    versions: List[str],
+    test_inputs: Dict[str, Any]
+):
+    """Compare multiple prompt versions."""
+    service = get_langfuse_service()
+    results = await service.compare_prompt_versions(prompt_id, versions, test_inputs)
+    
+    if not results:
+        raise HTTPException(status_code=500, detail="Failed to compare versions")
+    
+    return results
+
+
+@router.post("/langfuse/prompts/{prompt_id}/batch-evaluate")
+async def batch_evaluate_prompt(
+    prompt_id: str,
+    test_cases: List[Dict[str, Any]],
+    version: Optional[int] = None
+):
+    """Run batch evaluation on a test dataset."""
+    service = get_langfuse_service()
+    results = await service.batch_evaluate_prompt(prompt_id, test_cases, version)
+    
+    if not results:
+        raise HTTPException(status_code=500, detail="Failed to run batch evaluation")
+    
+    return results
+
+
+@router.post("/langfuse/prompts/{prompt_id}/estimate-cost")
+async def estimate_prompt_cost(
+    prompt_id: str,
+    variables: Dict[str, Any],
+    model: Optional[str] = None
+):
+    """Estimate token cost for a prompt."""
+    service = get_langfuse_service()
+    estimation = await service.estimate_prompt_cost(prompt_id, variables, model)
+    
+    if not estimation:
+        raise HTTPException(status_code=500, detail="Failed to estimate cost")
+    
+    return estimation
+
+
+@router.get("/langfuse/prompts/{prompt_id}/analytics")
+async def get_prompt_analytics(
+    prompt_id: str,
+    from_timestamp: Optional[str] = None,
+    to_timestamp: Optional[str] = None
+):
+    """Get performance analytics for a prompt."""
+    service = get_langfuse_service()
+    analytics = await service.get_prompt_analytics(prompt_id, from_timestamp, to_timestamp)
+    
+    if not analytics:
+        raise HTTPException(status_code=500, detail="Failed to get analytics")
+    
+    return analytics
+
+
+@router.post("/langfuse/prompts/{prompt_id}/rollback")
+async def rollback_prompt_version(
+    prompt_id: str,
+    target_version: int
+):
+    """Rollback a prompt to a previous version."""
+    service = get_langfuse_service()
+    result = await service.rollback_prompt_version(prompt_id, target_version)
+    
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to rollback prompt")
+    
+    return result
 

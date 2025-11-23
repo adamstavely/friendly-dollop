@@ -62,6 +62,10 @@ interface TraceTreeNode {
                 <mat-icon>security</mat-icon>
                 Security Scan
               </button>
+              <button mat-menu-item [routerLink]="['/observability/traces/compare']" [queryParams]="{trace1: trace.id}">
+                <mat-icon>compare</mat-icon>
+                Compare Trace
+              </button>
               <button mat-menu-item (click)="exportTrace()">
                 <mat-icon>download</mat-icon>
                 Export Trace

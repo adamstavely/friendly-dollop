@@ -151,16 +151,28 @@ export class ObservabilityService {
   /**
    * Export traces to CSV/JSON
    */
-  exportTraces(filters?: TraceFilters, format: 'csv' | 'json' = 'json'): Observable<Blob> {
-    return this.getTraces(filters).pipe(
+  exportTraces(filters?: TraceFilters, format: 'csv' | 'json' = 'json', traceIds?: string[]): Observable<Blob> {
+    // If specific trace IDs are provided, fetch those traces
+    const fetchObservable = traceIds && traceIds.length > 0
+      ? this.getTraces({ ...filters, limit: 1000 }).pipe(
+          switchMap(result => {
+            const filtered = result.traces.filter(t => traceIds.includes(t.id || ''));
+            return of({ traces: filtered, total: filtered.length });
+          })
+        )
+      : this.getTraces({ ...filters, limit: 1000 });
+
+    return fetchObservable.pipe(
       switchMap((result) => {
         const traces = result.traces;
         let blob: Blob;
-        let mimeType: string;
 
         if (format === 'csv') {
-          // Convert to CSV
-          const headers = ['ID', 'Name', 'Timestamp', 'Status', 'Tags', 'User ID', 'Session ID'];
+          // Enhanced CSV export with more fields
+          const headers = [
+            'ID', 'Name', 'Timestamp', 'Status', 'Tags', 'User ID', 'Session ID',
+            'Input', 'Output', 'Metadata', 'Release', 'Version'
+          ];
           const rows = traces.map(trace => [
             trace.id || '',
             trace.name || '',
@@ -168,21 +180,35 @@ export class ObservabilityService {
             trace.output && typeof trace.output === 'object' && 'error' in trace.output ? 'error' : 'success',
             (trace.tags || []).join(';'),
             trace.userId || '',
-            trace.sessionId || ''
+            trace.sessionId || '',
+            JSON.stringify(trace.input || {}),
+            JSON.stringify(trace.output || {}),
+            JSON.stringify(trace.metadata || {}),
+            trace.release || '',
+            trace.version || ''
           ]);
 
           const csvContent = [
             headers.join(','),
-            ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+            ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
           ].join('\n');
 
-          blob = new Blob([csvContent], { type: 'text/csv' });
-          mimeType = 'text/csv';
+          blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         } else {
-          // Convert to JSON
-          const jsonContent = JSON.stringify(traces, null, 2);
-          blob = new Blob([jsonContent], { type: 'application/json' });
-          mimeType = 'application/json';
+          // Enhanced JSON export with metadata
+          const exportData = {
+            exportedAt: new Date().toISOString(),
+            totalTraces: traces.length,
+            filters: filters || {},
+            traceIds: traceIds || [],
+            traces: traces.map(trace => ({
+              ...trace,
+              status: trace.output && typeof trace.output === 'object' && 'error' in trace.output ? 'error' : 'success',
+              exportedAt: new Date().toISOString()
+            }))
+          };
+          const jsonContent = JSON.stringify(exportData, null, 2);
+          blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
         }
 
         return of(blob);

@@ -514,20 +514,35 @@ export class TestDatasetComponent implements OnInit {
     this.evaluating = true;
     this.evaluationResults = [];
 
-    // Run evaluation for each test case
-    const evaluations = this.testCases.map(testCase => {
-      return this.playgroundService.executePrompt(
-        this.prompt!.id!,
-        testCase.inputs
-      ).pipe(
-        // Map to EvaluationResult
-        // This is a simplified version - in real implementation would compare outputs
-      );
+    // Use backend batch evaluation API
+    this.promptService.batchEvaluate(this.prompt.id!, this.testCases).subscribe({
+      next: (response) => {
+        if (response.results) {
+          this.evaluationResults = response.results.map((r: any) => ({
+            testCaseId: r.testCaseId,
+            inputs: r.inputs,
+            expectedOutput: r.expectedOutput,
+            actualOutput: r.actualOutput,
+            passed: r.passed,
+            latency: r.latency,
+            tokenUsage: r.tokenUsage,
+            error: r.error
+          }));
+        }
+        this.evaluating = false;
+      },
+      error: (err) => {
+        console.error('Error running batch evaluation:', err);
+        // Fallback to individual execution
+        this.runEvaluationFallback();
+      }
     });
+  }
 
-    // Execute all test cases
+  private runEvaluationFallback(): void {
+    // Fallback: execute test cases individually
     let completed = 0;
-    this.testCases.forEach((testCase, index) => {
+    this.testCases.forEach((testCase) => {
       this.playgroundService.executePrompt(
         this.prompt!.id!,
         testCase.inputs

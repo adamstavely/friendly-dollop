@@ -152,17 +152,41 @@ export class PromptPlaygroundService {
    */
   estimateCost(
     promptId: string,
-    variables: Record<string, any>
-  ): Observable<{ estimatedTokens: number; estimatedCost: number }> {
-    return this.api.post<{ estimatedTokens: number; estimatedCost: number }>(
-      `/prompts/${promptId}/estimate-cost`,
-      { variables }
+    variables: Record<string, any>,
+    model?: string
+  ): Observable<{
+    estimatedTokens: number;
+    estimatedPromptTokens: number;
+    estimatedCompletionTokens: number;
+    estimatedCost: number;
+    model?: string;
+    pricing?: { prompt: number; completion: number };
+  }> {
+    return this.api.post<{
+      estimatedTokens: number;
+      estimatedPromptTokens: number;
+      estimatedCompletionTokens: number;
+      estimatedCost: number;
+      model?: string;
+      pricing?: { prompt: number; completion: number };
+    }>(
+      `/langfuse/prompts/${promptId}/estimate-cost`,
+      { variables, model }
     ).pipe(
       catchError(() => {
-        // Mock estimation
+        // Mock estimation with detailed breakdown
+        const promptTokens = Math.floor(Math.random() * 2000) + 500;
+        const completionTokens = Math.floor(promptTokens / 2);
+        const totalTokens = promptTokens + completionTokens;
+        const cost = (promptTokens / 1000) * 0.002 + (completionTokens / 1000) * 0.002;
+        
         return of({
-          estimatedTokens: Math.floor(Math.random() * 2000) + 500,
-          estimatedCost: Math.random() * 0.1
+          estimatedTokens: totalTokens,
+          estimatedPromptTokens: promptTokens,
+          estimatedCompletionTokens: completionTokens,
+          estimatedCost: cost,
+          model: model || 'default',
+          pricing: { prompt: 0.002, completion: 0.002 }
         });
       })
     );

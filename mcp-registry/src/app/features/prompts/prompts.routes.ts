@@ -32,5 +32,9 @@ export const promptsRoutes: Routes = [
   {
     path: ':id/dataset',
     loadComponent: () => import('./components/test-dataset/test-dataset.component').then(m => m.TestDatasetComponent)
+  },
+  {
+    path: ':id/analytics',
+    loadComponent: () => import('./components/prompt-analytics/prompt-analytics.component').then(m => m.PromptAnalyticsComponent)
   }
 ];

@@ -313,6 +313,291 @@ class LangFuseService:
                 return data.get("versions", [])
         except httpx.HTTPError:
             return []
+    
+    async def execute_prompt(
+        self,
+        prompt_id: str,
+        variables: Dict[str, Any],
+        options: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        """Execute a prompt with variables."""
+        if not self.secret_key:
+            # Mock execution
+            return {
+                "output": f"Mock output for prompt {prompt_id}",
+                "latency": 500,
+                "tokenUsage": {
+                    "promptTokens": 100,
+                    "completionTokens": 50,
+                    "totalTokens": 150
+                },
+                "cost": 0.001
+            }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/api/public/prompts/{prompt_id}/execute",
+                    headers=self._get_headers(),
+                    json={"variables": variables, "options": options},
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPError:
+            return None
+    
+    async def compare_prompt_versions(
+        self,
+        prompt_id: str,
+        versions: List[str],
+        test_inputs: Dict[str, Any]
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Compare multiple prompt versions."""
+        if not self.secret_key:
+            # Mock comparison
+            return [
+                {
+                    "promptId": prompt_id,
+                    "version": v,
+                    "result": {
+                        "output": f"Mock output for version {v}",
+                        "latency": 500 + int(v) * 50
+                    },
+                    "metrics": {
+                        "latency": 500 + int(v) * 50,
+                        "cost": 0.001,
+                        "tokenUsage": {
+                            "promptTokens": 100,
+                            "completionTokens": 50,
+                            "totalTokens": 150
+                        }
+                    }
+                }
+                for v in versions
+            ]
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/api/public/prompts/{prompt_id}/compare",
+                    headers=self._get_headers(),
+                    json={"versions": versions, "testInputs": test_inputs},
+                    timeout=60.0
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPError:
+            return None
+    
+    async def batch_evaluate_prompt(
+        self,
+        prompt_id: str,
+        test_cases: List[Dict[str, Any]],
+        version: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Run batch evaluation on a test dataset."""
+        if not self.secret_key:
+            # Mock batch evaluation
+            results = []
+            for i, test_case in enumerate(test_cases):
+                results.append({
+                    "testCaseId": test_case.get("id", f"case-{i}"),
+                    "inputs": test_case.get("inputs", {}),
+                    "expectedOutput": test_case.get("expectedOutput"),
+                    "actualOutput": f"Mock output for test case {i}",
+                    "passed": True,
+                    "latency": 500 + i * 10,
+                    "tokenUsage": {
+                        "promptTokens": 100,
+                        "completionTokens": 50,
+                        "totalTokens": 150
+                    }
+                })
+            
+            passed = len([r for r in results if r["passed"]])
+            total = len(results)
+            
+            return {
+                "results": results,
+                "summary": {
+                    "total": total,
+                    "passed": passed,
+                    "failed": total - passed,
+                    "passRate": passed / total if total > 0 else 0,
+                    "averageLatency": sum(r["latency"] for r in results) / total if total > 0 else 0,
+                    "totalCost": sum(0.001 for _ in results)
+                }
+            }
+        
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.base_url}/api/public/prompts/{prompt_id}/batch-evaluate",
+                    headers=self._get_headers(),
+                    json={"testCases": test_cases, "version": version},
+                    timeout=300.0  # Longer timeout for batch operations
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPError:
+            return None
+    
+    async def estimate_prompt_cost(
+        self,
+        prompt_id: str,
+        variables: Dict[str, Any],
+        model: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Estimate token cost for a prompt."""
+        # Model pricing (per 1K tokens) - approximate values
+        model_pricing = {
+            "gpt-4": {"prompt": 0.03, "completion": 0.06},
+            "gpt-4-turbo": {"prompt": 0.01, "completion": 0.03},
+            "gpt-3.5-turbo": {"prompt": 0.0015, "completion": 0.002},
+            "default": {"prompt": 0.002, "completion": 0.002}
+        }
+        
+        model_key = model or "default"
+        pricing = model_pricing.get(model_key, model_pricing["default"])
+        
+        # Get prompt to estimate tokens
+        prompt = await self.get_prompt(prompt_id)
+        if not prompt:
+            return None
+        
+        prompt_text = prompt.get("prompt", "")
+        
+        # Simple token estimation (4 chars per token approximation)
+        estimated_prompt_tokens = len(prompt_text) // 4
+        estimated_completion_tokens = estimated_prompt_tokens // 2  # Rough estimate
+        
+        estimated_cost = (
+            (estimated_prompt_tokens / 1000) * pricing["prompt"] +
+            (estimated_completion_tokens / 1000) * pricing["completion"]
+        )
+        
+        return {
+            "estimatedTokens": estimated_prompt_tokens + estimated_completion_tokens,
+            "estimatedPromptTokens": estimated_prompt_tokens,
+            "estimatedCompletionTokens": estimated_completion_tokens,
+            "estimatedCost": estimated_cost,
+            "model": model_key,
+            "pricing": pricing
+        }
+    
+    async def get_prompt_analytics(
+        self,
+        prompt_id: str,
+        from_timestamp: Optional[str] = None,
+        to_timestamp: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Get performance analytics for a prompt."""
+        if not self.secret_key:
+            # Mock analytics
+            return {
+                "promptId": prompt_id,
+                "totalExecutions": 0,
+                "averageLatency": 0,
+                "averageCost": 0,
+                "totalCost": 0,
+                "successRate": 0,
+                "errorRate": 0,
+                "executionsOverTime": [],
+                "latencyTrend": [],
+                "costTrend": [],
+                "versionPerformance": []
+            }
+        
+        try:
+            # Get traces related to this prompt
+            traces = await self.search_traces(f"prompt:{prompt_id}", limit=1000)
+            
+            # Filter by timestamp if provided
+            if from_timestamp or to_timestamp:
+                # Filter logic would go here
+                pass
+            
+            # Calculate analytics from traces
+            total_executions = len(traces)
+            if total_executions == 0:
+                return {
+                    "promptId": prompt_id,
+                    "totalExecutions": 0,
+                    "averageLatency": 0,
+                    "averageCost": 0,
+                    "totalCost": 0,
+                    "successRate": 0,
+                    "errorRate": 0,
+                    "executionsOverTime": [],
+                    "latencyTrend": [],
+                    "costTrend": [],
+                    "versionPerformance": []
+                }
+            
+            latencies = []
+            costs = []
+            successes = 0
+            
+            for trace in traces:
+                if "latency" in trace:
+                    latencies.append(trace["latency"])
+                if "cost" in trace:
+                    costs.append(trace["cost"])
+                if trace.get("status") == "success":
+                    successes += 1
+            
+            avg_latency = sum(latencies) / len(latencies) if latencies else 0
+            avg_cost = sum(costs) / len(costs) if costs else 0
+            total_cost = sum(costs) if costs else 0
+            success_rate = successes / total_executions if total_executions > 0 else 0
+            
+            return {
+                "promptId": prompt_id,
+                "totalExecutions": total_executions,
+                "averageLatency": avg_latency,
+                "averageCost": avg_cost,
+                "totalCost": total_cost,
+                "successRate": success_rate,
+                "errorRate": 1 - success_rate,
+                "executionsOverTime": [],  # Would need time-series aggregation
+                "latencyTrend": [],
+                "costTrend": [],
+                "versionPerformance": []
+            }
+        except Exception:
+            return None
+    
+    async def rollback_prompt_version(
+        self,
+        prompt_id: str,
+        target_version: int
+    ) -> Optional[Dict[str, Any]]:
+        """Rollback a prompt to a previous version."""
+        if not self.secret_key:
+            return None
+        
+        try:
+            # Get the target version
+            versions = await self.get_prompt_versions(prompt_id)
+            target_version_data = next(
+                (v for v in versions if v.get("version") == target_version),
+                None
+            )
+            
+            if not target_version_data:
+                return None
+            
+            # Update prompt with target version content
+            result = await self.update_prompt(prompt_id, {
+                "prompt": target_version_data.get("prompt") or target_version_data.get("content", ""),
+                "labels": target_version_data.get("labels", []),
+                "config": target_version_data.get("config", {})
+            })
+            
+            return result
+        except Exception:
+            return None
 
 
 # Singleton instance

@@ -14,11 +14,19 @@ export const observabilityRoutes: Routes = [
     loadComponent: () => import('./components/trace-detail/trace-detail.component').then(m => m.TraceDetailComponent)
   },
   {
+    path: 'traces/compare',
+    loadComponent: () => import('./components/trace-comparison/trace-comparison.component').then(m => m.TraceComparisonComponent)
+  },
+  {
     path: 'generations/:id',
     loadComponent: () => import('./components/generation-viewer/generation-viewer.component').then(m => m.GenerationViewerComponent)
   },
   {
     path: 'scores',
     loadComponent: () => import('./components/score-analytics/score-analytics.component').then(m => m.ScoreAnalyticsComponent)
+  },
+  {
+    path: 'dashboards',
+    loadComponent: () => import('./components/custom-dashboard/custom-dashboard.component').then(m => m.CustomDashboardComponent)
   }
 ];
