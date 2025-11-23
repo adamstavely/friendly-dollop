@@ -9,9 +9,11 @@ import { MatListModule } from '@angular/material/list';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
+import { AsyncPipe } from '@angular/common';
 import { filter } from 'rxjs/operators';
 import { GlobalSearchComponent } from '../../shared/components/global-search/global-search.component';
 import { KeyboardShortcutsHelpComponent } from '../../shared/components/keyboard-shortcuts-help/keyboard-shortcuts-help.component';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -27,7 +29,8 @@ import { KeyboardShortcutsHelpComponent } from '../../shared/components/keyboard
     MatListModule,
     MatExpansionModule,
     MatTooltipModule,
-    GlobalSearchComponent
+    GlobalSearchComponent,
+    AsyncPipe
   ],
   template: `
     <mat-sidenav-container class="sidenav-container">
@@ -41,6 +44,10 @@ import { KeyboardShortcutsHelpComponent } from '../../shared/components/keyboard
           <a mat-list-item routerLink="/tools" routerLinkActive="active">
             <mat-icon>build</mat-icon>
             <span>Tools</span>
+          </a>
+          <a mat-list-item routerLink="/workflows" routerLinkActive="active">
+            <mat-icon>account_tree</mat-icon>
+            <span>Workflows</span>
           </a>
 
           <!-- Governance Group -->
@@ -141,6 +148,9 @@ import { KeyboardShortcutsHelpComponent } from '../../shared/components/keyboard
           <span>MCP Registry</span>
           <span class="spacer"></span>
           <app-global-search></app-global-search>
+          <button mat-icon-button (click)="toggleTheme()" [matTooltip]="(themeService.theme$ | async) === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+            <mat-icon>{{ (themeService.theme$ | async) === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+          </button>
           <button mat-icon-button routerLink="/help" matTooltip="Help & Documentation (Ctrl+H)">
             <mat-icon>help_outline</mat-icon>
           </button>
@@ -248,7 +258,8 @@ export class MainLayoutComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    public themeService: ThemeService
   ) {}
 
   ngOnInit(): void {
@@ -295,6 +306,11 @@ export class MainLayoutComponent implements OnInit {
       development: ['/gitops', '/schema', '/inspector'],
       administration: ['/personas', '/retirement']
     };
+    
+    // Auto-expand for workflows (main nav item)
+    if (url.startsWith('/workflows')) {
+      // Workflows is a main nav item, no group expansion needed
+    }
 
     for (const [group, routes] of Object.entries(routeGroups)) {
       if (routes.some(route => url.startsWith(route))) {
@@ -313,6 +329,10 @@ export class MainLayoutComponent implements OnInit {
     this.dialog.open(KeyboardShortcutsHelpComponent, {
       width: '500px'
     });
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 }
 

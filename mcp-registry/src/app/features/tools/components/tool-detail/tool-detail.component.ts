@@ -16,6 +16,7 @@ import { QualityScoreComponent } from '../../../../shared/components/quality-sco
 import { ComplianceTagsComponent } from '../../../../shared/components/compliance-tags/compliance-tags.component';
 import { LoadingSpinnerComponent } from '../../../../shared/components/loading-spinner/loading-spinner.component';
 import { ErrorDisplayComponent } from '../../../../shared/components/error-display/error-display.component';
+import { StatusBadgeComponent } from '../../../../shared/components/status-badge/status-badge.component';
 import { ToolChangelogComponent } from '../tool-changelog/tool-changelog.component';
 import { ToolSchemaViewerComponent } from '../tool-schema-viewer/tool-schema-viewer.component';
 import { VersionDiffComponent } from '../version-diff/version-diff.component';
@@ -26,6 +27,8 @@ import { HelpTooltipComponent } from '../../../../shared/components/help-tooltip
 import { ToastService } from '../../../../core/services/toast.service';
 import { ConfirmationService } from '../../../../core/services/confirmation.service';
 import { Router } from '@angular/router';
+import { WorkflowService } from '../../../workflows/services/workflow.service';
+import { Workflow } from '../../../../shared/models/workflow.model';
 
 @Component({
   selector: 'app-tool-detail',
@@ -51,7 +54,8 @@ import { Router } from '@angular/router';
     AuditLogComponent,
     InspectorLauncherComponent,
     HelpTooltipComponent,
-    DatePipe
+    DatePipe,
+    StatusBadgeComponent
   ],
   template: `
     <div class="tool-detail-container">
@@ -293,6 +297,31 @@ import { Router } from '@angular/router';
                 <app-inspector-launcher [tool]="tool"></app-inspector-launcher>
               </div>
             </mat-tab>
+
+            <mat-tab label="Workflows">
+              <div class="tab-content">
+                <h3>Workflows Using This Tool</h3>
+                <div *ngIf="workflowsUsingTool && workflowsUsingTool.length > 0">
+                  <mat-list>
+                    <mat-list-item *ngFor="let workflow of workflowsUsingTool">
+                      <a [routerLink]="['/workflows', workflow.id]">{{ workflow.name }}</a>
+                      <span matListItemLine>
+                        <app-status-badge [status]="workflow.status"></app-status-badge>
+                      </span>
+                    </mat-list-item>
+                  </mat-list>
+                </div>
+                <p *ngIf="!workflowsUsingTool || workflowsUsingTool.length === 0">
+                  No workflows are currently using this tool.
+                </p>
+                <div class="workflow-actions" style="margin-top: 16px;">
+                  <button mat-raised-button color="primary" [routerLink]="['/workflows/new']" [queryParams]="{toolId: tool.toolId}">
+                    <mat-icon>add</mat-icon>
+                    Create Workflow with This Tool
+                  </button>
+                </div>
+              </div>
+            </mat-tab>
           </mat-tab-group>
         </mat-card-content>
       </mat-card>
@@ -372,6 +401,7 @@ export class ToolDetailComponent implements OnInit {
   error: string | null = null;
   healthStatus: any = null;
   usageData: any = null;
+  workflowsUsingTool: Workflow[] = [];
 
   constructor(
     private route: ActivatedRoute,
@@ -379,7 +409,8 @@ export class ToolDetailComponent implements OnInit {
     private toolService: ToolService,
     private inspectorService: InspectorService,
     private toastService: ToastService,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private workflowService: WorkflowService
   ) {}
 
   ngOnInit(): void {
@@ -398,6 +429,7 @@ export class ToolDetailComponent implements OnInit {
         this.loading = false;
         this.loadHealthStatus(id);
         this.loadUsageData(id);
+        this.loadWorkflowsUsingTool(id);
       },
       error: (err) => {
         console.error('Error loading tool:', err);
@@ -488,6 +520,17 @@ export class ToolDetailComponent implements OnInit {
   launchInspector(): void {
     if (!this.tool) return;
     this.inspectorService.launchInspectorForTool(this.tool);
+  }
+
+  loadWorkflowsUsingTool(toolId: string): void {
+    this.workflowService.getWorkflowsByTool(toolId).subscribe({
+      next: (workflows) => {
+        this.workflowsUsingTool = workflows;
+      },
+      error: (err) => {
+        console.error('Error loading workflows using tool:', err);
+      }
+    });
   }
 }
 

@@ -1,0 +1,56 @@
+@use '@angular/material' as mat;
+
+// Dark theme color palette
+$dark-primary: mat.m2-define-palette(mat.$m2-indigo-palette, 400);
+$dark-accent: mat.m2-define-palette(mat.$m2-purple-palette, 400);
+$dark-warn: mat.m2-define-palette(mat.$m2-red-palette, 400);
+
+// Dark theme
+$dark-theme: mat.m2-define-dark-theme((
+  color: (
+    primary: $dark-primary,
+    accent: $dark-accent,
+    warn: $dark-warn,
+  ),
+  typography: mat.m2-define-typography-config(
+    $font-family: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  ),
+  density: 0,
+));
+
+// Dark theme CSS variables
+:root[data-theme="dark"] {
+  --bg-primary: #0a0e27;
+  --bg-secondary: #0f1629;
+  --bg-tertiary: #151b2e;
+  --bg-elevated: rgba(21, 27, 46, 0.6);
+  --bg-glass: rgba(15, 22, 41, 0.4);
+  
+  --text-primary: #e8eaf6;
+  --text-secondary: #b0b9d6;
+  --text-tertiary: #7a88b8;
+  
+  --accent-primary: #6366f1;
+  --accent-secondary: #8b5cf6;
+  --accent-tertiary: #a78bfa;
+  
+  --border-color: rgba(99, 102, 241, 0.15);
+  --border-hover: rgba(99, 102, 241, 0.3);
+  
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+}
+
+// Apply dark theme
+:root[data-theme="dark"] {
+  @include mat.all-component-colors($dark-theme);
+  @include mat.all-component-typographies($dark-theme);
+}
+

@@ -62,5 +62,9 @@ export const routes: Routes = [
   {
     path: 'help',
     loadComponent: () => import('./features/help/components/help-page/help-page.component').then(m => m.HelpPageComponent)
+  },
+  {
+    path: 'workflows',
+    loadChildren: () => import('./features/workflows/workflows.routes').then(m => m.workflowRoutes)
   }
 ];

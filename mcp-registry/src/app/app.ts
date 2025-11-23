@@ -3,6 +3,7 @@ import { MainLayoutComponent } from './layout/main-layout/main-layout.component'
 import { KeyboardShortcutsService } from './core/services/keyboard-shortcuts.service';
 import { MatDialog } from '@angular/material/dialog';
 import { KeyboardShortcutsHelpComponent } from './shared/components/keyboard-shortcuts-help/keyboard-shortcuts-help.component';
+import { ThemeService } from './core/services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -13,7 +14,8 @@ import { KeyboardShortcutsHelpComponent } from './shared/components/keyboard-sho
 export class App implements OnInit {
   constructor(
     private shortcutsService: KeyboardShortcutsService,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private themeService: ThemeService
   ) {}
 
   ngOnInit(): void {
